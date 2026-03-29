@@ -2,52 +2,122 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import datetime
 
-# --- 1. הגדרות כלליות (כאן משנים את שם האפליקציה שמופיע בלשונית) ---
-st.set_page_config(page_title="Nexus OS | Mendi's Command Center", layout="wide")
+# --- 1. הגדרות מערכת ---
+st.set_page_config(page_title="Nexus OS | Multi-User Edition", layout="wide")
 
-# --- 2. עיצוב יוקרתי (CSS) ---
+# --- 2. ניהול משתמשים (10 קודים) ---
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+    st.session_state.user_name = ""
+
+# מילון המשתמשים שלך - כאן אתה יכול לשנות שמות בעתיד
+USER_REGISTRY = {
+    "mendi2026": "Mendi Akiva",
+    "nexus02": "User Two",
+    "nexus03": "User Three",
+    "nexus04": "User Four",
+    "nexus05": "User Five",
+    "nexus06": "User Six",
+    "nexus07": "User Seven",
+    "nexus08": "User Eight",
+    "nexus09": "User Nine",
+    "nexus10": "User Ten"
+}
+
+# --- 3. מסך התחברות יוקרתי ---
+def login_screen():
+    st.markdown("""
+        <style>
+        .login-container {
+            text-align: center;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            border: 1px solid #00D1FF;
+            backdrop-filter: blur(10px);
+        }
+        </style>
+    """, unsafe_allow_html=True)
+    
+    st.markdown("<div class='login-container'>", unsafe_allow_html=True)
+    st.title("🔐 NEXUS OS SECURE ACCESS")
+    st.subheader("Please enter your private access code")
+    
+    input_code = st.text_input("Access Code", type="password")
+    
+    if st.button("Unlock System"):
+        if input_code in USER_REGISTRY:
+            st.session_state.logged_in = True
+            st.session_state.user_name = USER_REGISTRY[input_code]
+            st.rerun()
+        else:
+            st.error("❌ Invalid Code. Access Denied.")
+    st.markdown("</div>", unsafe_allow_html=True)
+
+# בדיקת התחברות
+if not st.session_state.logged_in:
+    login_screen()
+    st.stop()
+
+# --- 4. עיצוב ו-CSS (אחרי התחברות) ---
 st.markdown("""
     <style>
-    .stApp { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
-    section[data-testid="stSidebar"] { background-color: rgba(255, 255, 255, 0.8) !important; }
+    .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
+    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    h1, h2, h3, p { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. תפריט ניווט (כאן מוסיפים או משנים שמות של דפים!) ---
+# --- 5. תפריט ניווט בסיידבר ---
 with st.sidebar:
-    st.image("https://via.placeholder.com/150", caption="Nexus Intelligence")  # אפשר להחליף בלוגו שלך
+    st.markdown(f"<h3 style='text-align: center; color: #00D1FF;'>Hello, {st.session_state.user_name}</h3>", unsafe_allow_html=True)
+    st.divider()
+    
     selected = option_menu(
-        menu_title="Nexus Menu",
-        options=["Dashboard", "Subjects", "AI Tutor", "Files", "Settings"],  # <--- תוסיף כאן שמות דפים
+        menu_title="Nexus OS Menu",
+        options=["Dashboard", "Subjects", "AI Tutor", "Files", "Settings"],
         icons=["house", "book", "robot", "folder", "gear"],
         default_index=0,
+        styles={
+            "container": {"padding": "5px!", "background-color": "#0f172a"},
+            "icon": {"color": "#00D1FF", "font-size": "20px"}, 
+            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#1e293b"},
+            "nav-link-selected": {"background-color": "#00D1FF", "color": "black"},
+        }
     )
+    
+    st.divider()
+    if st.button("🚪 Logout"):
+        st.session_state.logged_in = False
+        st.rerun()
 
-# --- 4. תוכן הדפים (לוגיקה) ---
-
+# --- 6. לוגיקת דפים ---
 if selected == "Dashboard":
-    st.title("🚀 Welcome, Mendi")
-    st.write("System Status: **Active & Secure**")
+    st.title(f"🚀 Dashboard: Welcome, {st.session_state.user_name}")
+    st.write(f"Status: **Encrypted & Online** | Date: {datetime.date.today()}")
 
-    # דוגמה למדדים (Metrics)
     c1, c2, c3 = st.columns(3)
-    c1.metric("Current Avg", "92.5", "+1.2%")
-    c2.metric("Study Hours", "45h", "This Month")
-    c3.metric("Tasks", "12", "Pending")
+    c1.metric("System Load", "Minimal", "Stable")
+    c2.metric("Security Level", "Alpha", "Locked")
+    c3.metric("User Access", "Authorized", f"{st.session_state.user_name}")
+    
+    st.divider()
+    st.info("Your academic personal assistant is ready to work.")
 
 elif selected == "Subjects":
     st.title("📚 Course Inventory")
-    # כאן תוכל להוסיף רשימת מקצועות בעתיד
-    st.info("Select a subject to view deep analytics and materials.")
+    st.write("Displaying personal curriculum...")
 
 elif selected == "AI Tutor":
     st.title("🤖 Nexus AI Assistant")
-    user_q = st.chat_input("Ask anything about your studies...")
+    user_q = st.chat_input(f"Ask me anything, {st.session_state.user_name}...")
     if user_q:
-        st.write(f"Mendi, you asked: {user_q}. (AI logic will be linked here)")
+        with st.chat_message("user"):
+            st.markdown(user_q)
+        with st.chat_message("assistant"):
+            st.write("I am processing your request using the Gemini Intelligence Engine...")
 
-# --- הוראות להוספת דף חדש ---
-# אם הוספת ב-options את השם "Gym", תוסיף כאן:
-# elif selected == "Gym":
-#     st.title("💪 Fitness Tracker")
-#     st.write("Tracking your online fitness course...")
+elif selected == "Settings":
+    st.title("⚙️ System Settings")
+    st.write(f"Logged in as: **{st.session_state.user_name}**")
+    st.write("System Language: Hebrew/English")
