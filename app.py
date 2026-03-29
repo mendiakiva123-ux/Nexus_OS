@@ -91,7 +91,7 @@ t = {
         "upload_title": "העלאת חומר ל-AI", "assign_sub": "שייך חומר למקצוע",
         "upload_label": "PDF, Word, Excel, CSV (גרור לכאן)", "analyze_btn": "בצע אנליזה",
         "no_data": "אין נתונים בכספת.", "ask": "שאל את ה-Tutor...",
-        "subjects": ["מתמתטיקה", "פיזיקה", "מדעי המחשב", "כתיבה אקדמאית", "עברית", "אחר..."]
+        "subjects": ["מתמטיקה", "פיזיקה", "מדעי המחשב", "כתיבה אקדמאית", "עברית", "אחר..."]
     },
     "English": {
         "welcome": "Welcome", "dash": "Dashboard", "analyst": "Analyst Mode",
