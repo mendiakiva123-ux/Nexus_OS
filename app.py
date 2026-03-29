@@ -11,7 +11,6 @@ from ai_manager import process_file_to_db, get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | Elite Command Center", layout="wide")
 init_db()
 
-# יצירת תיקיית העלאות אם לא קיימת (מונע שגיאות AI)
 if not os.path.exists("ai_data/uploads"):
     os.makedirs("ai_data/uploads", exist_ok=True)
 
@@ -33,22 +32,19 @@ USER_REGISTRY = {
     "nexus10": "User Ten"
 }
 
-# --- 3. מסך התחברות ---
+# --- 3. מסך התחברות יוקרתי ---
 def login_screen():
     st.markdown("""
         <style>
         [data-testid="stAppViewContainer"] {
             background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
-                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1920&q=80') !important;
+                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') !important;
             background-size: cover !important;
         }
         .login-box {
             background: rgba(255, 255, 255, 0.1);
-            padding: 50px;
-            border-radius: 25px;
-            border: 2px solid #00D1FF;
-            text-align: center;
-            backdrop-filter: blur(15px);
+            padding: 50px; border-radius: 25px; border: 2px solid #00D1FF;
+            text-align: center; backdrop-filter: blur(15px);
         }
         .stTextInput input { color: black !important; background-color: white !important; font-weight: bold !important; }
         </style>
@@ -101,48 +97,38 @@ t = {
 }
 cur = t[st.session_state.lang]
 
-# --- 5. עיצוב פנימי (CSS - צביעה לשחור של כל האלמנטים) ---
+# --- 5. עיצוב פנימי (CSS - צבע שחור לחיצים ולטקסט) ---
 st.markdown(f"""
     <style>
     [data-testid="stAppViewContainer"] {{
         background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), 
-                    url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1920&q=80') !important;
+                    url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') !important;
         background-size: cover !important; background-attachment: fixed !important;
     }}
 
-    /* טקסטים לבנים בדפים */
+    /* טקסטים לבנים בולטים */
     h1, h2, h3, h4, p, label, span, li {{ color: white !important; text-shadow: 2px 2px 4px black; }}
     
-    /* צביעת החיצים של הסיידבר לשחור (לבקשתך) */
+    /* הפיכת החיצים (Sidebar Buttons) לשחור על רקע לבן */
     button[data-testid="sidebar-button"] svg {{ 
         fill: black !important; 
         color: black !important; 
-        background-color: rgba(255,255,255,0.8); 
-        border-radius: 50%;
+        background-color: white !important; 
+        border-radius: 50%; padding: 2px;
     }}
 
-    /* טקסט שחור בתוך תיבות בחירה, תיבות טקסט ורשימות נפתחות */
-    input, select, textarea, div[data-baseweb="select"], .stNumberInput input, div[role="listbox"] span {{
+    /* טקסט שחור בתוך כל תיבות הבחירה והקלט - כולל את מה שבפנים */
+    input, select, textarea, div[data-baseweb="select"], .stNumberInput input, div[role="listbox"] span, .stSelectbox div {{
         color: black !important; 
         background-color: white !important; 
         font-weight: bold !important;
     }}
 
     /* טקסט שחור בתיבת העלאת קבצים */
-    div[data-testid="stFileUploader"] section {{
-        background-color: white !important;
-        color: black !important;
-    }}
-    div[data-testid="stFileUploader"] label, div[data-testid="stFileUploader"] p {{
-        color: black !important;
-        text-shadow: none !important;
-    }}
+    div[data-testid="stFileUploader"] section {{ background-color: white !important; color: black !important; }}
+    div[data-testid="stFileUploader"] label, div[data-testid="stFileUploader"] p {{ color: black !important; text-shadow: none !important; }}
 
-    div[data-testid="stMetric"] {{
-        background: rgba(255, 255, 255, 0.1) !important; 
-        border: 2px solid #00D1FF !important; 
-        border-radius: 20px !important; 
-    }}
+    div[data-testid="stMetric"] {{ background: rgba(255, 255, 255, 0.1) !important; border: 2px solid #00D1FF !important; border-radius: 20px !important; }}
     div[data-testid="stMetricValue"] {{ color: #00D1FF !important; font-weight: 800 !important; }}
 
     section[data-testid="stSidebar"] {{ 
@@ -221,7 +207,6 @@ elif selected == cur["tutor"]:
                 sub_key = "general" if "General" in chat_sub or "כללי" in chat_sub else chat_sub
                 response_placeholder = st.empty()
                 full_response = ""
-                # הוספת טיפול בשגיאות ספציפי ל-AI
                 for chunk in get_ai_response_stream(sub_key, prompt):
                     content = chunk.content if hasattr(chunk, 'content') else str(chunk)
                     full_response += content
@@ -229,7 +214,11 @@ elif selected == cur["tutor"]:
                 response_placeholder.markdown(full_response)
                 st.session_state.chat_history.append({"role": "assistant", "content": full_response})
             except Exception as e:
-                st.error(f"AI Error: {str(e)}")
+                # הוספת הסבר ברור למקרה שהמפתח חסר ב-Secrets
+                if "GOOGLE_API_KEY" in str(e):
+                    st.error("🚨 שגיאה: מפתח ה-AI חסר ב-Secrets של Streamlit. אנא הוסף את GOOGLE_API_KEY בהגדרות.")
+                else:
+                    st.error(f"AI Error: {str(e)}")
 
 elif selected == cur["analyst"]:
     st.header(cur["analyst"])
