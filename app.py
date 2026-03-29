@@ -3,17 +3,16 @@ from streamlit_option_menu import option_menu
 import datetime
 
 # --- 1. הגדרות מערכת ---
-st.set_page_config(page_title="Nexus OS | Multi-Device Access", layout="wide")
+st.set_page_config(page_title="Nexus OS | Multi-User Edition", layout="wide")
 
 # --- 2. ניהול משתמשים (10 קודים) ---
-# הזיכרון הזה הוא פר-מכשיר, לכן תצטרך להקיש את הקוד פעם אחת בכל מכשיר
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_name = ""
 
-# מילון המשתמשים - הקודים שלך
+# מילון המשתמשים שלך - כאן אתה יכול לשנות שמות בעתיד
 USER_REGISTRY = {
-    "mendi2026": "Mendi Akiva",  # הקוד האישי שלך
+    "mendi2026": "Mendi Akiva",
     "nexus02": "User Two",
     "nexus03": "User Three",
     "nexus04": "User Four",
@@ -31,66 +30,94 @@ def login_screen():
         <style>
         .login-container {
             text-align: center;
-            padding: 40px;
-            background: rgba(255, 255, 255, 0.05);
-            border-radius: 20px;
+            padding: 50px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
             border: 1px solid #00D1FF;
-            backdrop-filter: blur(15px);
-            margin: auto;
-            max-width: 500px;
-            margin-top: 50px;
-        }
-        [data-testid="stAppViewContainer"] {
-            background: linear-gradient(rgba(0, 0, 0, 0.8), rgba(0, 0, 0, 0.8)), 
-                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1920&q=80') !important;
-            background-size: cover !important;
+            backdrop-filter: blur(10px);
         }
         </style>
     """, unsafe_allow_html=True)
     
     st.markdown("<div class='login-container'>", unsafe_allow_html=True)
-    st.markdown("<h1 style='color: #00D1FF;'>NEXUS OS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='color: white;'>Enter your access code to unlock the system</p>", unsafe_allow_html=True)
+    st.title("🔐 NEXUS OS SECURE ACCESS")
+    st.subheader("Please enter your private access code")
     
-    # שימוש ב-key כדי למנוע התנגשויות
-    input_code = st.text_input("Access Code", type="password", key="login_input")
+    input_code = st.text_input("Access Code", type="password")
     
-    if st.button("Unlock System", use_container_width=True):
+    if st.button("Unlock System"):
         if input_code in USER_REGISTRY:
             st.session_state.logged_in = True
             st.session_state.user_name = USER_REGISTRY[input_code]
             st.rerun()
         else:
-            st.error("❌ Invalid Code. Please try again.")
+            st.error("❌ Invalid Code. Access Denied.")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# בדיקה: אם לא מחובר, מציג מסך לוגין ועוצר
+# בדיקת התחברות
 if not st.session_state.logged_in:
     login_screen()
     st.stop()
 
-# --- 4. אם מחובר - הצגת האפליקציה ---
+# --- 4. עיצוב ו-CSS (אחרי התחברות) ---
 st.markdown("""
     <style>
-    .stApp { background-color: #0f172a; }
-    h1, h2, h3, p, span { color: white !important; }
+    .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
+    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    h1, h2, h3, p { color: white !important; }
     </style>
     """, unsafe_allow_html=True)
 
+# --- 5. תפריט ניווט בסיידבר ---
 with st.sidebar:
-    st.markdown(f"<h3 style='text-align: center; color: #00D1FF;'>{st.session_state.user_name}</h3>", unsafe_allow_html=True)
+    st.markdown(f"<h3 style='text-align: center; color: #00D1FF;'>Hello, {st.session_state.user_name}</h3>", unsafe_allow_html=True)
+    st.divider()
+    
     selected = option_menu(
-        "Nexus Menu", ["Dashboard", "AI Tutor", "Settings"], 
-        icons=["house", "robot", "gear"], default_index=0
+        menu_title="Nexus OS Menu",
+        options=["Dashboard", "Subjects", "AI Tutor", "Files", "Settings"],
+        icons=["house", "book", "robot", "folder", "gear"],
+        default_index=0,
+        styles={
+            "container": {"padding": "5px!", "background-color": "#0f172a"},
+            "icon": {"color": "#00D1FF", "font-size": "20px"}, 
+            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#1e293b"},
+            "nav-link-selected": {"background-color": "#00D1FF", "color": "black"},
+        }
     )
-    if st.button("Logout"):
+    
+    st.divider()
+    if st.button("🚪 Logout"):
         st.session_state.logged_in = False
         st.rerun()
 
+# --- 6. לוגיקת דפים ---
 if selected == "Dashboard":
-    st.title(f"🚀 Welcome back, {st.session_state.user_name}")
-    st.info("System is synced across all your devices.")
+    st.title(f"🚀 Dashboard: Welcome, {st.session_state.user_name}")
+    st.write(f"Status: **Encrypted & Online** | Date: {datetime.date.today()}")
+
+    c1, c2, c3 = st.columns(3)
+    c1.metric("System Load", "Minimal", "Stable")
+    c2.metric("Security Level", "Alpha", "Locked")
+    c3.metric("User Access", "Authorized", f"{st.session_state.user_name}")
     
+    st.divider()
+    st.info("Your academic personal assistant is ready to work.")
+
+elif selected == "Subjects":
+    st.title("📚 Course Inventory")
+    st.write("Displaying personal curriculum...")
+
 elif selected == "AI Tutor":
-    st.title("🤖 Nexus AI Tutor")
-    st.write("Ready for your questions...")
+    st.title("🤖 Nexus AI Assistant")
+    user_q = st.chat_input(f"Ask me anything, {st.session_state.user_name}...")
+    if user_q:
+        with st.chat_message("user"):
+            st.markdown(user_q)
+        with st.chat_message("assistant"):
+            st.write("I am processing your request using the Gemini Intelligence Engine...")
+
+elif selected == "Settings":
+    st.title("⚙️ System Settings")
+    st.write(f"Logged in as: **{st.session_state.user_name}**")
+    st.write("System Language: Hebrew/English")
