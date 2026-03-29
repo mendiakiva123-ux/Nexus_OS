@@ -5,12 +5,11 @@ import datetime
 # --- 1. הגדרות מערכת ---
 st.set_page_config(page_title="Nexus OS | Multi-User Edition", layout="wide")
 
-# --- 2. ניהול משתמשים (10 קודים) ---
+# --- 2. ניהול משתמשים ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_name = ""
 
-# מילון המשתמשים שלך - כאן אתה יכול לשנות שמות בעתיד
 USER_REGISTRY = {
     "mendi2026": "Mendi Akiva",
     "nexus02": "User Two",
@@ -24,7 +23,7 @@ USER_REGISTRY = {
     "nexus10": "User Ten"
 }
 
-# --- 3. מסך התחברות יוקרתי ---
+# --- 3. מסך התחברות ---
 def login_screen():
     st.markdown("""
         <style>
@@ -35,6 +34,7 @@ def login_screen():
             border-radius: 15px;
             border: 1px solid #00D1FF;
             backdrop-filter: blur(10px);
+            margin-top: 100px;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -54,17 +54,35 @@ def login_screen():
             st.error("❌ Invalid Code. Access Denied.")
     st.markdown("</div>", unsafe_allow_html=True)
 
-# בדיקת התחברות
 if not st.session_state.logged_in:
     login_screen()
     st.stop()
 
-# --- 4. עיצוב ו-CSS (אחרי התחברות) ---
+# --- 4. עיצוב ו-CSS משופר (צבע חיצים וטקסט) ---
 st.markdown("""
     <style>
+    /* רקע כללי */
     .stApp { background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); color: white; }
-    [data-testid="stHeader"] { background: rgba(0,0,0,0); }
+    
+    /* הפיכת החיצים (Sidebar Arrows) ללבן */
+    button[data-testid="sidebar-button"] svg {
+        fill: white !important;
+        color: white !important;
+    }
+    
+    /* צבע טקסט כללי בתוך הסיידבר */
+    section[data-testid="stSidebar"] span, section[data-testid="stSidebar"] p {
+        color: white !important;
+    }
+
+    /* תיקון צבע הכותרות */
     h1, h2, h3, p { color: white !important; }
+    
+    /* עיצוב כפתור ה-Logout */
+    .stButton>button {
+        color: white !important;
+        border-color: #00D1FF !important;
+    }
     </style>
     """, unsafe_allow_html=True)
 
@@ -79,15 +97,25 @@ with st.sidebar:
         icons=["house", "book", "robot", "folder", "gear"],
         default_index=0,
         styles={
-            "container": {"padding": "5px!", "background-color": "#0f172a"},
+            "container": {"padding": "5px!", "background-color": "#0f172a", "border": "1px solid #1e293b"},
             "icon": {"color": "#00D1FF", "font-size": "20px"}, 
-            "nav-link": {"font-size": "16px", "text-align": "left", "margin":"0px", "--hover-color": "#1e293b"},
-            "nav-link-selected": {"background-color": "#00D1FF", "color": "black"},
+            "nav-link": {
+                "font-size": "16px", 
+                "text-align": "left", 
+                "margin":"0px", 
+                "--hover-color": "#1e293b",
+                "color": "white"  # <--- טקסט לבן בתוך התפריט
+            },
+            "nav-link-selected": {
+                "background-color": "#00D1FF", 
+                "color": "black", # טקסט שחור רק כשנבחר (בשביל הניגודיות)
+                "font-weight": "bold"
+            },
         }
     )
     
     st.divider()
-    if st.button("🚪 Logout"):
+    if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
 
