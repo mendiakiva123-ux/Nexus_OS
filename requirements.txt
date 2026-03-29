@@ -1,0 +1,16 @@
+streamlit
+pandas
+plotly
+sqlalchemy
+streamlit-option-menu
+python-docx
+openpyxl
+langchain
+langchain-community
+langchain-huggingface
+langchain-core
+langchain-text-splitters
+pypdf
+faiss-cpu
+sentence-transformers
+langchain-google-genai
