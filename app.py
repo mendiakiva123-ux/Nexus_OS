@@ -11,7 +11,11 @@ from ai_manager import process_file_to_db, get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | Elite Command Center", layout="wide")
 init_db()
 
-# --- 2. ניהול משתמשים (10 קודים) ---
+# יצירת תיקיית העלאות אם לא קיימת (מונע שגיאות AI)
+if not os.path.exists("ai_data/uploads"):
+    os.makedirs("ai_data/uploads", exist_ok=True)
+
+# --- 2. ניהול משתמשים ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_name = ""
@@ -29,15 +33,14 @@ USER_REGISTRY = {
     "nexus10": "User Ten"
 }
 
-# --- 3. מסך התחברות יוקרתי עם רקע ---
+# --- 3. מסך התחברות ---
 def login_screen():
     st.markdown("""
         <style>
         [data-testid="stAppViewContainer"] {
             background: linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.6)), 
-                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') !important;
+                        url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1920&q=80') !important;
             background-size: cover !important;
-            background-position: center !important;
         }
         .login-box {
             background: rgba(255, 255, 255, 0.1);
@@ -46,15 +49,8 @@ def login_screen():
             border: 2px solid #00D1FF;
             text-align: center;
             backdrop-filter: blur(15px);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
-        h1, p { color: white !important; text-shadow: 2px 2px 4px black; }
-        /* עיצוב תיבת הקלט במסך הכניסה */
-        .stTextInput input {
-            color: black !important;
-            background-color: white !important;
-            font-weight: bold !important;
-        }
+        .stTextInput input { color: black !important; background-color: white !important; font-weight: bold !important; }
         </style>
     """, unsafe_allow_html=True)
     
@@ -63,10 +59,7 @@ def login_screen():
         st.markdown("<div style='height: 100px;'></div>", unsafe_allow_html=True)
         st.markdown("<div class='login-box'>", unsafe_allow_html=True)
         st.markdown("<h1 style='color: #00D1FF;'>NEXUS OS</h1>", unsafe_allow_html=True)
-        st.markdown("<p>Enter your elite access code</p>", unsafe_allow_html=True)
-        
         input_code = st.text_input("Security Code", type="password", label_visibility="collapsed")
-        
         if st.button("Authenticate", use_container_width=True):
             if input_code in USER_REGISTRY:
                 st.session_state.logged_in = True
@@ -80,7 +73,7 @@ if not st.session_state.logged_in:
     login_screen()
     st.stop()
 
-# --- 4. הגדרות שפה וזיכרון ---
+# --- 4. הגדרות שפה ---
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 
@@ -108,57 +101,60 @@ t = {
 }
 cur = t[st.session_state.lang]
 
-# --- 5. עיצוב פנימי (CSS משודרג) ---
+# --- 5. עיצוב פנימי (CSS - צביעה לשחור של כל האלמנטים) ---
 st.markdown(f"""
     <style>
-    /* רקע הספרייה בדפים הפנימיים */
     [data-testid="stAppViewContainer"] {{
         background: linear-gradient(rgba(0, 0, 0, 0.75), rgba(0, 0, 0, 0.75)), 
-                    url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') !important;
-        background-size: cover !important;
-        background-attachment: fixed !important;
+                    url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1920&q=80') !important;
+        background-size: cover !important; background-attachment: fixed !important;
     }}
 
-    /* טקסטים לבנים וברורים */
-    h1, h2, h3, h4, p, label, span, li {{ 
-        color: white !important; 
-        text-shadow: 2px 2px 4px black; 
-    }}
+    /* טקסטים לבנים בדפים */
+    h1, h2, h3, h4, p, label, span, li {{ color: white !important; text-shadow: 2px 2px 4px black; }}
     
-    /* תיקון קריטי: טקסט שחור על רקע לבן בתיבות הקלט */
-    input, select, textarea, div[data-baseweb="select"], .stNumberInput input {{
+    /* צביעת החיצים של הסיידבר לשחור (לבקשתך) */
+    button[data-testid="sidebar-button"] svg {{ 
+        fill: black !important; 
+        color: black !important; 
+        background-color: rgba(255,255,255,0.8); 
+        border-radius: 50%;
+    }}
+
+    /* טקסט שחור בתוך תיבות בחירה, תיבות טקסט ורשימות נפתחות */
+    input, select, textarea, div[data-baseweb="select"], .stNumberInput input, div[role="listbox"] span {{
         color: black !important; 
         background-color: white !important; 
         font-weight: bold !important;
-        border-radius: 10px !important;
     }}
 
-    /* עיצוב המדדים (Metrics) */
+    /* טקסט שחור בתיבת העלאת קבצים */
+    div[data-testid="stFileUploader"] section {{
+        background-color: white !important;
+        color: black !important;
+    }}
+    div[data-testid="stFileUploader"] label, div[data-testid="stFileUploader"] p {{
+        color: black !important;
+        text-shadow: none !important;
+    }}
+
     div[data-testid="stMetric"] {{
         background: rgba(255, 255, 255, 0.1) !important; 
         border: 2px solid #00D1FF !important; 
         border-radius: 20px !important; 
-        backdrop-filter: blur(10px);
     }}
     div[data-testid="stMetricValue"] {{ color: #00D1FF !important; font-weight: 800 !important; }}
 
-    /* סיידבר כהה וחיצים לבנים */
     section[data-testid="stSidebar"] {{ 
         background-color: rgba(15, 23, 42, 0.98) !important; 
         border-{"left" if st.session_state.lang == "עברית" else "right"}: 2px solid #00D1FF;
     }}
-    button[data-testid="sidebar-button"] svg {{ fill: white !important; color: white !important; }}
-    
-    /* צבע הרדיו באטן של השפה */
-    div[data-testid="stWidgetLabel"] p {{ color: #00D1FF !important; }}
     </style>
     """, unsafe_allow_html=True)
 
 # --- 6. סיידבר ---
 with st.sidebar:
     st.markdown(f"<h3 style='text-align: center; color: #00D1FF;'>{st.session_state.user_name}</h3>", unsafe_allow_html=True)
-    st.markdown("<h1 style='color: #00D1FF; text-align: center; margin-top: -15px;'>NEXUS OS</h1>", unsafe_allow_html=True)
-    
     lang_choice = st.radio("Language / שפה", ["עברית", "English"], 
                           index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
     if lang_choice != st.session_state.lang:
@@ -174,7 +170,6 @@ with st.sidebar:
                                 "nav-link-selected": {"background-color": "#00D1FF", "color": "black"}
                            })
     
-    st.divider()
     if st.button("🚪 Logout", use_container_width=True):
         st.session_state.logged_in = False
         st.rerun()
@@ -184,7 +179,6 @@ df = get_all_grades()
 # --- 7. לוגיקת דפים ---
 if selected == cur["dash"]:
     st.markdown(f"<h1 style='text-align: center; font-size: 3.5rem;'>{cur['welcome']}, {st.session_state.user_name}</h1>", unsafe_allow_html=True)
-    
     c1, c2 = st.columns(2)
     c1.metric(cur["avg"], f"{df['grade'].mean():.1f}" if not df.empty else "0.0")
     c2.metric(cur["total"], len(df))
@@ -209,7 +203,6 @@ if selected == cur["dash"]:
         if f and st.button(cur["analyze_btn"]):
             with st.spinner("Analyzing..."):
                 path = f"ai_data/uploads/{f.name}"
-                os.makedirs("ai_data/uploads", exist_ok=True)
                 with open(path, "wb") as file: file.write(f.getbuffer())
                 process_file_to_db(path, up_s)
                 st.success("Ready!")
@@ -224,14 +217,19 @@ elif selected == cur["tutor"]:
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"): st.markdown(prompt)
         with st.chat_message("assistant"):
-            sub_key = "general" if "General" in chat_sub or "כללי" in chat_sub else chat_sub
-            response_placeholder = st.empty()
-            full_response = ""
-            for chunk in get_ai_response_stream(sub_key, prompt):
-                full_response += (chunk.content if hasattr(chunk, 'content') else str(chunk))
-                response_placeholder.markdown(full_response + "▌")
-            response_placeholder.markdown(full_response)
-            st.session_state.chat_history.append({"role": "assistant", "content": full_response})
+            try:
+                sub_key = "general" if "General" in chat_sub or "כללי" in chat_sub else chat_sub
+                response_placeholder = st.empty()
+                full_response = ""
+                # הוספת טיפול בשגיאות ספציפי ל-AI
+                for chunk in get_ai_response_stream(sub_key, prompt):
+                    content = chunk.content if hasattr(chunk, 'content') else str(chunk)
+                    full_response += content
+                    response_placeholder.markdown(full_response + "▌")
+                response_placeholder.markdown(full_response)
+                st.session_state.chat_history.append({"role": "assistant", "content": full_response})
+            except Exception as e:
+                st.error(f"AI Error: {str(e)}")
 
 elif selected == cur["analyst"]:
     st.header(cur["analyst"])
@@ -248,5 +246,4 @@ elif selected == cur["history"]:
 
 elif selected == cur["settings"]:
     st.header(cur["settings"])
-    st.write(f"Logged in as: **{st.session_state.user_name}**")
     if st.button("🚨 Reset All Data"): clear_db(); st.rerun()
