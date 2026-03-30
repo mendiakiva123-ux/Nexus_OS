@@ -5,32 +5,36 @@ from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream
 
 # --- 1. הגדרות מערכת ---
-st.set_page_config(page_title="Nexus OS | NextGen", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
-# --- 2. מילון שפות ---
+# --- 2. מילון שפות ומקצועות לימוד ---
 if 'lang' not in st.session_state:
     st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+
+# הרשימה שלך (השארתי את 'כללי' ראשון עבור הבוט, אבל נסתיר אותו בהזנת ציונים)
+SUBJECTS_HE = ["General / כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
+SUBJECTS_EN = ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Computer Science", "Other"]
 
 t = {
     "עברית": {
         "dash": "דאשבורד", "tutor": "AI Tutor 🤖", "history": "היסטוריה", "settings": "הגדרות",
         "avg": "ממוצע אקדמי", "total": "סה\"כ משימות", "add": "הזנת ציונים", "sub": "מקצוע",
         "topic": "נושא", "grade": "ציון", "save": "שמור נתונים", "upload_title": "העלאת חומר",
-        "ask": "שאל אותי משהו...", "subjects": ["General / כללי", "Python", "Data Analyst", "SQL", "מתמטיקה", "אחר"]
+        "ask": "שאל אותי משהו...", "subjects": SUBJECTS_HE
     },
     "English": {
         "dash": "Dashboard", "tutor": "AI Tutor 🤖", "history": "History", "settings": "Settings",
         "avg": "Average Score", "total": "Total Records", "add": "Add Grade", "sub": "Subject",
         "topic": "Topic", "grade": "Grade", "save": "Save Record", "upload_title": "Upload Data",
-        "ask": "Ask me anything...", "subjects": ["General", "Python", "Data Analyst", "SQL", "Math", "Other"]
+        "ask": "Ask me anything...", "subjects": SUBJECTS_EN
     }
 }
 cur = t[st.session_state.lang]
 
-# --- 3. עיצוב Glassmorphism מודרני ---
+# --- 3. עיצוב חכם ויוקרתי (Glassmorphism + קריאות גבוהה) ---
 st.markdown("""
     <style>
     * { transition: none !important; animation: none !important; }
@@ -46,6 +50,7 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
     
+    /* קלפי הנתונים */
     div[data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(0, 209, 255, 0.3) !important;
@@ -54,7 +59,7 @@ st.markdown("""
     div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3rem !important; }
     h1, h2, h3, p, label, span { color: #e0e0e0 !important; text-shadow: 1px 1px 2px black; }
     
-    /* תיבות קלט ורשימות בלבן עם טקסט שחור קריא */
+    /* תיבות קלט ורשימות - שחור על לבן ברור לחלוטין */
     input, select, textarea, [data-baseweb="select"], .stNumberInput input {
         background: rgba(255, 255, 255, 0.95) !important; color: #000000 !important;
         border-radius: 10px !important; font-weight: 900 !important;
@@ -63,6 +68,7 @@ st.markdown("""
         color: black !important; font-weight: bold !important; background-color: white !important;
     }
     
+    /* חיצים שחורים בולטים */
     button[data-testid="sidebar-button"] svg { 
         fill: black !important; color: black !important; background-color: white !important; border-radius: 4px; padding: 2px;
     }
@@ -71,11 +77,13 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. תפריט ניווט עם בחירת שפה ---
+# --- 4. תפריט ניווט יוקרתי (ללא סיסמה) ---
 with st.sidebar:
-    st.markdown("<h2 style='text-align:center; color:#00D1FF;'>NEXUS OS</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center; color:#00D1FF; letter-spacing: 2px;'>NEXUS OS</h2>", unsafe_allow_html=True)
+    st.markdown("<p style='text-align:center; color:#aaaaaa; font-size:14px;'>Welcome, Mendi</p>", unsafe_allow_html=True)
     
-    lang_choice = st.radio("Language / שפה", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
+    # מתג שפות
+    lang_choice = st.radio("", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
@@ -93,10 +101,15 @@ with st.sidebar:
             "nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.15)", "color": "#00D1FF", "border": "1px solid #00D1FF"}
         }
     )
+    
+    st.divider()
+    if st.button("🗑️ Clear Chat History", use_container_width=True):
+        st.session_state.chat_history = []
+        st.rerun()
 
 df = get_all_grades()
 
-# --- 5. לוגיקת דפים ---
+# --- 5. מסכי המערכת ---
 if selected == cur["dash"]:
     st.markdown(f"<h1>📊 {cur['dash']}</h1>", unsafe_allow_html=True)
     
@@ -106,6 +119,7 @@ if selected == cur["dash"]:
     c2.metric(cur["total"], len(df))
     c3.metric("System Status", "Optimal")
     
+    st.markdown("<br><p style='color:#00D1FF; font-weight:bold;'>Academic Progress</p>", unsafe_allow_html=True)
     st.progress(int(avg_grade) / 100.0)
     st.divider()
     
@@ -113,7 +127,8 @@ if selected == cur["dash"]:
     with col1:
         st.markdown(f"### 📝 {cur['add']}")
         with st.form("grade_form", clear_on_submit=True):
-            sub = st.selectbox(cur["sub"], cur["subjects"][1:]) # ללא General
+            # מציג את כל המקצועות חוץ מ"כללי" להזנת ציונים
+            sub = st.selectbox(cur["sub"], cur["subjects"][1:]) 
             tp = st.text_input(cur["topic"])
             grd = st.number_input(cur["grade"], 0, 100, 90)
             if st.form_submit_button(cur["save"]):
@@ -125,8 +140,10 @@ if selected == cur["dash"]:
 
 elif selected == cur["tutor"]:
     st.markdown(f"<h1>🧠 {cur['tutor']}</h1>", unsafe_allow_html=True)
-    sub_choice = st.selectbox(cur["sub"], cur["subjects"]) # כולל General כברירת מחדל
+    # כאן "כללי" מופיע ראשון וזמין לבוט
+    sub_choice = st.selectbox(cur["sub"], cur["subjects"]) 
     
+    # הדפסת היסטוריית השיחה
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -152,7 +169,7 @@ elif selected == cur["history"]:
     else:
         st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
         csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Download (CSV)", data=csv, file_name='nexus.csv', mime='text/csv')
+        st.download_button(label="📥 Download Data (CSV)", data=csv, file_name='nexus_grades.csv', mime='text/csv')
 
 elif selected == cur["settings"]:
     st.markdown(f"<h1>⚙️ {cur['settings']}</h1>", unsafe_allow_html=True)
