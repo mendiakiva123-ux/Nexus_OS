@@ -5,7 +5,7 @@ import json
 def get_ai_response_stream(subject, prompt):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # שלב 1: מציאת המודל (הקוד היציב שלנו)
+    # שלב 1: מציאת המודל
     list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     try:
         list_res = requests.get(list_url)
@@ -29,7 +29,6 @@ def get_ai_response_stream(subject, prompt):
         return
 
     # שלב 2: הזרמת נתונים אמיתית (True Streaming)
-    # הוספנו פה streamGenerateContent?alt=sse - זה אומר שהמידע יזרום אליך בחתיכות מיידיות!
     stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
@@ -37,35 +36,38 @@ def get_ai_response_stream(subject, prompt):
     
     payload = {
         "contents": [{"parts": [{"text": f"{context}\n\nUser Question: {prompt}"}]}],
-        # הנה הקסם שמחבר אותו לאינטרנט! כלי החיפוש של גוגל בזמן אמת:
-        "tools": [{"googleSearch": {}}] 
+        "tools": [{"googleSearch": {}}] # הגישה לאינטרנט
     }
     
     try:
-        # stream=True אומר לפייתון לא לחכות לסוף התשובה אלא לשאוב אותה תוך כדי תנועה
         res = requests.post(stream_url, headers=headers, json=payload, stream=True)
+        
+        # 💡 הפתרון לג'יבריש: הכרחת המערכת לקרוא את ההזרמה בקידוד התומך בעברית!
+        res.encoding = 'utf-8'
         
         if res.status_code != 200:
             yield f"🚨 שגיאה בשרת גוגל: {res.status_code} - {res.text}"
             return
             
-        # פיענוח ההזרמה בזמן אמת והצגה על המסך
-        for line in res.iter_lines(decode_unicode=True):
-            if line.startswith("data: "):
-                data_str = line[6:]
-                if data_str.strip() == "[DONE]":
-                    break # סוף התשובה
-                try:
-                    chunk_json = json.loads(data_str)
-                    if 'candidates' in chunk_json and len(chunk_json['candidates']) > 0:
-                        content = chunk_json['candidates'][0].get('content', {})
-                        parts = content.get('parts', [])
-                        if parts:
-                            text_chunk = parts[0].get('text', '')
-                            yield text_chunk # זורק את המילה ישר למסך שלך בלי השהיות!
-                except json.JSONDecodeError:
-                    continue
-                    
+        # קריאת ההזרמה שורה אחר שורה ופענוח ה-JSON
+        for line in res.iter_lines():
+            if line:
+                decoded_line = line.decode('utf-8')
+                if decoded_line.startswith("data: "):
+                    data_str = decoded_line[6:]
+                    if data_str.strip() == "[DONE]":
+                        break
+                    try:
+                        chunk_json = json.loads(data_str)
+                        if 'candidates' in chunk_json and len(chunk_json['candidates']) > 0:
+                            content = chunk_json['candidates'][0].get('content', {})
+                            parts = content.get('parts', [])
+                            if parts:
+                                text_chunk = parts[0].get('text', '')
+                                yield text_chunk
+                    except json.JSONDecodeError:
+                        continue
+                        
     except Exception as e:
         yield f"🚨 שגיאת רשת הזרמה: {e}"
 
