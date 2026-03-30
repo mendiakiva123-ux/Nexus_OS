@@ -8,74 +8,83 @@ from ai_manager import get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | NextGen", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
-STUDY_SUBJECTS = ["General / כללי", "Python", "Data Analyst", "SQL", "מתמטיקה", "אחר"]
-
+# --- 2. מילון שפות ---
+if 'lang' not in st.session_state:
+    st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-# --- 2. עיצוב Glassmorphism חדשני ויוקרתי ---
+t = {
+    "עברית": {
+        "dash": "דאשבורד", "tutor": "AI Tutor 🤖", "history": "היסטוריה", "settings": "הגדרות",
+        "avg": "ממוצע אקדמי", "total": "סה\"כ משימות", "add": "הזנת ציונים", "sub": "מקצוע",
+        "topic": "נושא", "grade": "ציון", "save": "שמור נתונים", "upload_title": "העלאת חומר",
+        "ask": "שאל אותי משהו...", "subjects": ["General / כללי", "Python", "Data Analyst", "SQL", "מתמטיקה", "אחר"]
+    },
+    "English": {
+        "dash": "Dashboard", "tutor": "AI Tutor 🤖", "history": "History", "settings": "Settings",
+        "avg": "Average Score", "total": "Total Records", "add": "Add Grade", "sub": "Subject",
+        "topic": "Topic", "grade": "Grade", "save": "Save Record", "upload_title": "Upload Data",
+        "ask": "Ask me anything...", "subjects": ["General", "Python", "Data Analyst", "SQL", "Math", "Other"]
+    }
+}
+cur = t[st.session_state.lang]
+
+# --- 3. עיצוב Glassmorphism מודרני ---
 st.markdown("""
     <style>
-    /* רקע רדיאלי מודרני (סייבר/דאטה) */
+    * { transition: none !important; animation: none !important; }
+    
     [data-testid="stAppViewContainer"] {
         background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364) !important;
         color: #ffffff;
     }
     
-    /* סיידבר שקוף-מטושטש */
     section[data-testid="stSidebar"] {
         background-color: rgba(15, 32, 39, 0.6) !important;
         backdrop-filter: blur(10px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    /* מדדים מרחפים (Cards) */
     div[data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(0, 209, 255, 0.3) !important;
-        border-radius: 20px;
-        padding: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
-        backdrop-filter: blur(10px);
+        border-radius: 20px; padding: 20px; backdrop-filter: blur(10px);
     }
     div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3rem !important; }
-    h1, h2, h3, p, label { color: #e0e0e0 !important; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    h1, h2, h3, p, label, span { color: #e0e0e0 !important; text-shadow: 1px 1px 2px black; }
     
-    /* תיבות קלט שחור-על-לבן בולט (לבקשתך) */
+    /* תיבות קלט ורשימות בלבן עם טקסט שחור קריא */
     input, select, textarea, [data-baseweb="select"], .stNumberInput input {
-        background: rgba(255, 255, 255, 0.95) !important;
-        color: #000000 !important;
-        border-radius: 10px !important;
-        border: 2px solid transparent !important;
-        font-weight: 800 !important;
+        background: rgba(255, 255, 255, 0.95) !important; color: #000000 !important;
+        border-radius: 10px !important; font-weight: 900 !important;
     }
-    input:focus, select:focus { border: 2px solid #00D1FF !important; }
     div[role="listbox"] ul li, div[data-baseweb="popover"] span {
-        color: black !important; font-weight: bold !important;
+        color: black !important; font-weight: bold !important; background-color: white !important;
     }
     
-    /* כפתורים מודרניים */
-    .stButton>button {
-        background: linear-gradient(90deg, #00D1FF 0%, #007BFF 100%);
-        color: white !important;
-        border: none;
-        border-radius: 25px;
-        font-weight: bold;
-        transition: all 0.3s ease 0s;
+    button[data-testid="sidebar-button"] svg { 
+        fill: black !important; color: black !important; background-color: white !important; border-radius: 4px; padding: 2px;
     }
-    .stButton>button:hover { box-shadow: 0px 5px 15px rgba(0, 209, 255, 0.4); transform: translateY(-2px); }
+    div[data-testid="stFileUploader"] section { background-color: white !important; color: black !important; }
+    div[data-testid="stFileUploader"] p, div[data-testid="stFileUploader"] span { color: black !important; text-shadow: none; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. תפריט ניווט (הסיסמה בוטלה!) ---
+# --- 4. תפריט ניווט עם בחירת שפה ---
 with st.sidebar:
-    st.markdown("<h2 style='text-align:center; color:#00D1FF; letter-spacing: 2px;'>NEXUS OS</h2>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#aaaaaa; font-size:12px;'>Welcome, Mendi</p>", unsafe_allow_html=True)
+    st.markdown("<h2 style='text-align:center; color:#00D1FF;'>NEXUS OS</h2>", unsafe_allow_html=True)
+    
+    lang_choice = st.radio("Language / שפה", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
+    if lang_choice != st.session_state.lang:
+        st.session_state.lang = lang_choice
+        st.rerun()
+        
     st.divider()
     
     selected = option_menu(
         menu_title=None, 
-        options=["Dashboard", "AI Tutor", "History", "Settings"], 
+        options=[cur["dash"], cur["tutor"], cur["history"], cur["settings"]], 
         icons=["grid-1x2-fill", "cpu-fill", "clock-history", "sliders"], 
         default_index=0,
         styles={
@@ -87,44 +96,42 @@ with st.sidebar:
 
 df = get_all_grades()
 
-# --- 4. לוגיקת דפים ---
-if selected == "Dashboard":
-    st.markdown("<h1>📊 Analytics Hub</h1>", unsafe_allow_html=True)
+# --- 5. לוגיקת דפים ---
+if selected == cur["dash"]:
+    st.markdown(f"<h1>📊 {cur['dash']}</h1>", unsafe_allow_html=True)
     
     avg_grade = df['grade'].mean() if not df.empty else 0.0
-    
     c1, c2, c3 = st.columns(3)
-    c1.metric("Average Score", f"{avg_grade:.1f}")
-    c2.metric("Total Records", len(df))
+    c1.metric(cur["avg"], f"{avg_grade:.1f}")
+    c2.metric(cur["total"], len(df))
     c3.metric("System Status", "Optimal")
     
-    st.markdown("<br><p style='color:#00D1FF; font-weight:bold;'>Academic Progress</p>", unsafe_allow_html=True)
     st.progress(int(avg_grade) / 100.0)
     st.divider()
     
     col1, col2 = st.columns(2)
     with col1:
-        st.markdown("### 📝 New Entry")
+        st.markdown(f"### 📝 {cur['add']}")
         with st.form("grade_form", clear_on_submit=True):
-            sub = st.selectbox("Subject", STUDY_SUBJECTS[1:])
-            tp = st.text_input("Topic")
-            grd = st.number_input("Grade", 0, 100, 90)
-            if st.form_submit_button("Save Record"):
+            sub = st.selectbox(cur["sub"], cur["subjects"][1:]) # ללא General
+            tp = st.text_input(cur["topic"])
+            grd = st.number_input(cur["grade"], 0, 100, 90)
+            if st.form_submit_button(cur["save"]):
                 save_grade(sub, tp, grd)
                 st.rerun()
     with col2:
-        st.markdown("### 📁 Upload Data")
-        st.file_uploader("Drop PDF/Docx files here", type=["pdf", "docx"])
+        st.markdown(f"### 📁 {cur['upload_title']}")
+        st.file_uploader("PDF/Docx", type=["pdf", "docx"])
 
-elif selected == "AI Tutor":
-    st.markdown("<h1>🧠 Nexus AI Core</h1>", unsafe_allow_html=True)
-    sub_choice = st.selectbox("Context:", STUDY_SUBJECTS)
+elif selected == cur["tutor"]:
+    st.markdown(f"<h1>🧠 {cur['tutor']}</h1>", unsafe_allow_html=True)
+    sub_choice = st.selectbox(cur["sub"], cur["subjects"]) # כולל General כברירת מחדל
     
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             
-    if prompt := st.chat_input("Initialize query..."):
+    if prompt := st.chat_input(cur["ask"]):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"): 
             st.markdown(prompt)
@@ -138,15 +145,17 @@ elif selected == "AI Tutor":
             res_box.markdown(full_res)
             st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
-elif selected == "History":
-    st.markdown("<h1>📜 Database Records</h1>", unsafe_allow_html=True)
+elif selected == cur["history"]:
+    st.markdown(f"<h1>📜 {cur['history']}</h1>", unsafe_allow_html=True)
     if df.empty:
-        st.info("No records found in the system.")
+        st.info("No records found.")
     else:
         st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(label="📥 Download (CSV)", data=csv, file_name='nexus.csv', mime='text/csv')
 
-elif selected == "Settings":
-    st.markdown("<h1>⚙️ System Configurations</h1>", unsafe_allow_html=True)
+elif selected == cur["settings"]:
+    st.markdown(f"<h1>⚙️ {cur['settings']}</h1>", unsafe_allow_html=True)
     if st.button("🚨 Purge Database"):
         clear_db()
         st.rerun()
