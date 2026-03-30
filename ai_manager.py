@@ -5,25 +5,23 @@ import time
 def get_ai_response_stream(subject, prompt):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # כתובת ראשית (Flash)
-    url_flash = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
-    # כתובת גיבוי ברזל (Pro) למקרה של 404
-    url_pro = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
+    # כתובת v1 היציבה (לא v1beta!)
+    url_flash = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+    url_pro = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.0-pro:generateContent?key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
-    context = f"אתה עוזר חכם במערכת Nexus OS. נושא: {subject}."
+    context = f"You are a helpful academic assistant in Nexus OS. Current subject: {subject}."
     
     payload = {
-        "contents": [{"parts": [{"text": f"{context}\n\nשאלה: {prompt}"}]}],
-        "generationConfig": {"temperature": 0.7}
+        "contents": [{"parts": [{"text": f"{context}\n\nUser: {prompt}"}]}]
     }
     
     try:
-        # ניסיון ראשון
+        # ניסיון ראשון מול המודל המהיר ביותר בגרסה היציבה
         response = requests.post(url_flash, headers=headers, json=payload)
         
-        # אם קיבלנו 404, עוברים מיד לגיבוי בלי שהמשתמש ירגיש
-        if response.status_code == 404:
+        # אם יש שגיאה (כמו 404), מעבר מיידי למודל הגיבוי
+        if response.status_code != 200:
             response = requests.post(url_pro, headers=headers, json=payload)
             
         if response.status_code == 200:
@@ -33,7 +31,7 @@ def get_ai_response_stream(subject, prompt):
                 yield char
                 time.sleep(0.005)
         else:
-            yield f"🚨 שגיאת שרת גוגל: {response.status_code} - {response.text}"
+            yield f"🚨 שגיאת שרת סופית מגוגל: {response.text}"
             
     except Exception as e:
         yield f"🚨 שגיאת תקשורת: {str(e)}"
