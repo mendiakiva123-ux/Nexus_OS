@@ -8,13 +8,12 @@ from ai_manager import get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
-# --- 2. מילון שפות והמקצועות המעודכנים שביקשת ---
+# --- 2. מילון שפות ומקצועות לימוד ---
 if 'lang' not in st.session_state:
     st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-# הרשימה המעודכנת בדיוק כפי שביקשת
 SUBJECTS_HE = ["General / כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
 SUBJECTS_EN = ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Computer Science", "Other"]
 
@@ -34,7 +33,7 @@ t = {
 }
 cur = t[st.session_state.lang]
 
-# --- 3. עיצוב Glassmorphism ---
+# --- 3. עיצוב חכם ויוקרתי (Glassmorphism) ---
 st.markdown("""
     <style>
     * { transition: none !important; animation: none !important; }
@@ -72,6 +71,23 @@ st.markdown("""
     div[data-testid="stFileUploader"] section { background-color: white !important; color: black !important; }
     div[data-testid="stFileUploader"] p, div[data-testid="stFileUploader"] span { color: black !important; text-shadow: none; }
     </style>
+    """, unsafe_allow_html=True)
+
+# --- תוספת יישור לימין (RTL) עבור עברית בלבד ---
+if st.session_state.lang == "עברית":
+    st.markdown("""
+        <style>
+        /* יישור הצ'אט והטקסט בתוכו לימין */
+        [data-testid="stChatMessageContent"], [data-testid="stChatMessageContent"] * {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+        /* יישור תיבת ההקלדה שלך לימין */
+        [data-testid="stChatInput"] textarea {
+            direction: rtl !important;
+            text-align: right !important;
+        }
+        </style>
     """, unsafe_allow_html=True)
 
 # --- 4. תפריט ניווט ---
@@ -123,7 +139,6 @@ if selected == cur["dash"]:
     with col1:
         st.markdown(f"### 📝 {cur['add']}")
         with st.form("grade_form", clear_on_submit=True):
-            # מציג את כל המקצועות חוץ מ"כללי"
             sub = st.selectbox(cur["sub"], cur["subjects"][1:]) 
             tp = st.text_input(cur["topic"])
             grd = st.number_input(cur["grade"], 0, 100, 90)
@@ -152,6 +167,7 @@ elif selected == cur["tutor"]:
             full_res = ""
             for chunk in get_ai_response_stream(sub_choice, prompt):
                 full_res += chunk
+                # שינוי קטן כדי שהסמן ייראה טוב מימין לשמאל
                 res_box.markdown(full_res + " ▌")
             res_box.markdown(full_res)
             st.session_state.chat_history.append({"role": "assistant", "content": full_res})
