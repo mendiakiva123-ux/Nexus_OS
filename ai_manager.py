@@ -2,15 +2,15 @@ import streamlit as st
 import google.generativeai as genai
 
 def get_ai_response_stream(subject, prompt):
-    # משיכת המפתח מה-Secrets (הגדרנו ב-Streamlit)
+    # משיכת המפתח מהסודות (Secrets)
     api_key = st.secrets["GOOGLE_API_KEY"]
     genai.configure(api_key=api_key)
     
-    # שימוש במודל היציב ביותר - גרסה 1.5 פלאש
+    # שימוש במודל היציב gemini-1.5-flash
     model = genai.GenerativeModel('gemini-1.5-flash')
     
     context = f"אתה עוזר אקדמי במערכת Nexus OS. המשתמש שואל לגבי: {subject}."
-    full_prompt = f"{context}\n\nהודעת משתמש: {prompt}"
+    full_prompt = f"{context}\n\nשאלה: {prompt}"
     
     # יצירת תשובה בסטרימינג למהירות מקסימלית
     response = model.generate_content(full_prompt, stream=True)
