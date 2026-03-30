@@ -1,42 +1,20 @@
 import streamlit as st
-import requests
-import time
+import google.generativeai as genai
 
 def get_ai_response_stream(subject, prompt):
+    # משיכת המפתח מהסודות
     api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
     
-    # הכתובת הישירה והמדויקת של גוגל - לא משתנה לעולם
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # הסוד לפתרון ה-404: מעבר למודל 'gemini-pro' שתמיד זמין וחסין תקלות
+    model = genai.GenerativeModel('gemini-pro')
     
-    headers = {'Content-Type': 'application/json'}
-    
-    context = f"אתה מורה פרטי ואנליסט נתונים בכיר במערכת Nexus OS. הנושא כרגע: {subject}."
+    context = f"אתה עוזר אקדמי במערכת Nexus OS. נושא השיחה הנוכחי: {subject}."
     full_prompt = f"{context}\n\nשאלה: {prompt}"
     
-    # בניית חבילת הנתונים הישירה
-    payload = {
-        "contents": [{"parts": [{"text": full_prompt}]}],
-        "generationConfig": {"temperature": 0.7}
-    }
-    
-    try:
-        response = requests.post(url, headers=headers, json=payload)
-        
-        if response.status_code == 200:
-            data = response.json()
-            # שליפת הטקסט מתוך ה-JSON של גוגל
-            text = data['candidates'][0]['content']['parts'][0]['text']
-            
-            # הדפסה אנושית (זורמת) אל המסך
-            words = text.split(" ")
-            for word in words:
-                yield word + " "
-                time.sleep(0.02) # השהייה קטנטנה לאפקט של כתיבה חיה
-        else:
-            yield f"🚨 שגיאת שרת: קוד {response.status_code}. פרטים: {response.text}"
-            
-    except Exception as e:
-        yield f"🚨 שגיאת תקשורת קריטית: {str(e)}"
+    # החזרת התשובה בסטרימינג ישירות מהמודל היציב
+    response = model.generate_content(full_prompt, stream=True)
+    return response
 
 def process_file_to_db(file_path, subject):
     pass
