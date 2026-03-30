@@ -4,4 +4,4 @@ pandas
 plotly
 supabase
 st-supabase-connection
-google-generativeai>=0.5.2
+google-generativeai>=0.7.0
