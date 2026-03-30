@@ -1,25 +1,27 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
 import pandas as pd
-import datetime
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream
 
 # --- 1. הגדרות מערכת ---
-st.set_page_config(page_title="Nexus OS | Elite Command Center", layout="wide")
+st.set_page_config(page_title="Nexus OS | Command Center", layout="wide")
 init_db()
 
 STUDY_SUBJECTS = ["General / כללי", "Python", "Data Analysis", "SQL", "מתמטיקה", "אחר"]
 
+# --- 2. ניהול משתמשים וזיכרון צ'אט ---
 if 'logged_in' not in st.session_state:
     st.session_state.logged_in = False
     st.session_state.user_name = ""
+if 'chat_history' not in st.session_state:
+    st.session_state.chat_history = []
 
 USER_REGISTRY = {
     "mendi2026": "Mendi Akiva", "nexus02": "User Two", "nexus03": "User Three"
-} # יכול להוסיף את השאר...
+} 
 
-# --- 2. עיצוב CSS (מהירות, טקסט שחור קריא, חיצים שחורים) ---
+# --- 3. עיצוב חסין (טקסט שחור קריא וחיצים שחורים) ---
 st.markdown("""
     <style>
     * { transition: none !important; animation: none !important; }
@@ -35,7 +37,7 @@ st.markdown("""
         color: black !important; background-color: white !important; font-weight: 900 !important;
     }
     div[role="listbox"] ul li, div[data-baseweb="popover"] span {
-        color: black !important; font-weight: bold !important;
+        color: black !important; font-weight: bold !important; background-color: white !important;
     }
 
     /* חיצי התפריט - שחור מודגש */
@@ -55,7 +57,7 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 3. מסך כניסה ---
+# --- 4. מסך כניסה ---
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
@@ -70,7 +72,7 @@ if not st.session_state.logged_in:
                 st.error("❌ Access Denied.")
     st.stop()
 
-# --- 4. תפריט ---
+# --- 5. תפריט בסיידבר ---
 with st.sidebar:
     st.markdown(f"<h3 style='text-align:center; color: #00D1FF;'>{st.session_state.user_name}</h3>", unsafe_allow_html=True)
     st.divider()
@@ -79,31 +81,24 @@ with st.sidebar:
                            styles={"nav-link-selected": {"background-color": "#00D1FF", "color": "black"}})
     if st.button("Logout", use_container_width=True):
         st.session_state.logged_in = False
+        st.session_state.chat_history = [] # ניקוי היסטוריית צ'אט ביציאה
         st.rerun()
 
 df = get_all_grades()
 
-# --- 5. לוגיקת דפים ---
+# --- 6. לוגיקת דפים ---
 if selected == "Dashboard":
     st.title("🚀 Command Center")
-    
-    avg_grade = df['grade'].mean() if not df.empty else 0.0
-    
     c1, c2 = st.columns(2)
-    c1.metric("Average / ממוצע", f"{avg_grade:.1f}")
+    c1.metric("Average / ממוצע", f"{df['grade'].mean():.1f}" if not df.empty else "0.0")
     c2.metric("Total Entries / משימות", len(df))
-    
-    # פיצ'ר חדש: מד התקדמות אקדמי
-    st.markdown("🎯 **Academic Progress**")
-    st.progress(int(avg_grade) / 100.0)
-    
     st.divider()
     
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Add Grade / הוסף ציון")
         with st.form("grade_form", clear_on_submit=True):
-            sub = st.selectbox("Subject", STUDY_SUBJECTS[1:])
+            sub = st.selectbox("Subject", STUDY_SUBJECTS[1:]) # לא מציג את General פה
             tp = st.text_input("Topic / נושא")
             grd = st.number_input("Grade / ציון", 0, 100, 90)
             if st.form_submit_button("Save to Vault"):
@@ -111,23 +106,34 @@ if selected == "Dashboard":
                 st.rerun()
                 
     with col2:
-        st.subheader("Quick Upload / העלאה")
+        st.subheader("Quick Upload / העלאת קבצים")
         st.file_uploader("Upload PDF/Docx", type=["pdf", "docx"])
 
 elif selected == "AI Tutor":
     st.title("🤖 Nexus AI Assistant")
     sub_choice = st.selectbox("נושא השיחה:", STUDY_SUBJECTS)
     
+    # הצגת היסטוריית השיחה הקודמת (החזרתי את זה!)
+    for msg in st.session_state.chat_history:
+        with st.chat_message(msg["role"]):
+            st.markdown(msg["content"])
+            
     if prompt := st.chat_input("שאל אותי משהו..."):
-        with st.chat_message("user"): st.write(prompt)
+        # שמירה והצגה של שאלת המשתמש
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        with st.chat_message("user"): 
+            st.markdown(prompt)
+            
+        # קבלת תשובה מהבוט
         with st.chat_message("assistant"):
             res_box = st.empty()
             full_res = ""
-            # הקריאה ל-REST API העוצמתי
             for chunk in get_ai_response_stream(sub_choice, prompt):
                 full_res += chunk
                 res_box.markdown(full_res + "▌")
             res_box.markdown(full_res)
+            # שמירת התשובה בזיכרון
+            st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
 elif selected == "History":
     st.title("📜 Grade History")
@@ -135,9 +141,6 @@ elif selected == "History":
         st.info("No records found.")
     else:
         st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
-        # פיצ'ר חדש: הורדת הנתונים
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Download Data (CSV)", data=csv, file_name='nexus_grades.csv', mime='text/csv')
 
 elif selected == "Settings":
     st.title("⚙️ Settings")
