@@ -8,7 +8,7 @@ from ai_manager import get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | Command Center", layout="wide")
 init_db()
 
-STUDY_SUBJECTS = ["General / כללי", "Python", "Data Analysis", "SQL", "מתמטיקה", "אחר"]
+STUDY_SUBJECTS = ["General / כללי", "Python", "Data Analyst", "SQL", "מתמטיקה", "אחר"]
 
 # --- 2. ניהול משתמשים וזיכרון צ'אט ---
 if 'logged_in' not in st.session_state:
@@ -81,7 +81,7 @@ with st.sidebar:
                            styles={"nav-link-selected": {"background-color": "#00D1FF", "color": "black"}})
     if st.button("Logout", use_container_width=True):
         st.session_state.logged_in = False
-        st.session_state.chat_history = [] # ניקוי היסטוריית צ'אט ביציאה
+        st.session_state.chat_history = [] 
         st.rerun()
 
 df = get_all_grades()
@@ -89,16 +89,21 @@ df = get_all_grades()
 # --- 6. לוגיקת דפים ---
 if selected == "Dashboard":
     st.title("🚀 Command Center")
+    avg_grade = df['grade'].mean() if not df.empty else 0.0
+    
     c1, c2 = st.columns(2)
-    c1.metric("Average / ממוצע", f"{df['grade'].mean():.1f}" if not df.empty else "0.0")
+    c1.metric("Average / ממוצע", f"{avg_grade:.1f}")
     c2.metric("Total Entries / משימות", len(df))
+    
+    st.markdown("🎯 **Academic Progress**")
+    st.progress(int(avg_grade) / 100.0)
     st.divider()
     
     col1, col2 = st.columns(2)
     with col1:
         st.subheader("Add Grade / הוסף ציון")
         with st.form("grade_form", clear_on_submit=True):
-            sub = st.selectbox("Subject", STUDY_SUBJECTS[1:]) # לא מציג את General פה
+            sub = st.selectbox("Subject", STUDY_SUBJECTS[1:]) # לא מציג את General
             tp = st.text_input("Topic / נושא")
             grd = st.number_input("Grade / ציון", 0, 100, 90)
             if st.form_submit_button("Save to Vault"):
@@ -111,20 +116,18 @@ if selected == "Dashboard":
 
 elif selected == "AI Tutor":
     st.title("🤖 Nexus AI Assistant")
-    sub_choice = st.selectbox("נושא השיחה:", STUDY_SUBJECTS)
+    sub_choice = st.selectbox("נושא השיחה:", STUDY_SUBJECTS) # General מופיע ראשון
     
-    # הצגת היסטוריית השיחה הקודמת (החזרתי את זה!)
+    # הצגת היסטוריית השיחה הקודמת
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
             
     if prompt := st.chat_input("שאל אותי משהו..."):
-        # שמירה והצגה של שאלת המשתמש
         st.session_state.chat_history.append({"role": "user", "content": prompt})
         with st.chat_message("user"): 
             st.markdown(prompt)
             
-        # קבלת תשובה מהבוט
         with st.chat_message("assistant"):
             res_box = st.empty()
             full_res = ""
@@ -132,7 +135,6 @@ elif selected == "AI Tutor":
                 full_res += chunk
                 res_box.markdown(full_res + "▌")
             res_box.markdown(full_res)
-            # שמירת התשובה בזיכרון
             st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
 elif selected == "History":
@@ -141,6 +143,8 @@ elif selected == "History":
         st.info("No records found.")
     else:
         st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button(label="📥 Download Data (CSV)", data=csv, file_name='nexus_grades.csv', mime='text/csv')
 
 elif selected == "Settings":
     st.title("⚙️ Settings")
