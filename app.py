@@ -3,11 +3,10 @@ from streamlit_option_menu import option_menu
 import pandas as pd
 import plotly.express as px
 import datetime
-import os
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream
 
-# --- 1. הגדרות מערכת ומהירות ---
+# --- 1. הגדרות מערכת ---
 st.set_page_config(page_title="Nexus OS | Elite Command Center", layout="wide")
 init_db()
 
@@ -26,17 +25,17 @@ USER_REGISTRY = {
 # --- 3. עיצוב CSS (שחור על לבן + חיצים שחורים + רקע ספרייה) ---
 st.markdown("""
     <style>
-    /* ביטול אנימציות למהירות מקסימלית */
+    /* מהירות וביצועים */
     * { transition: none !important; animation: none !important; }
 
-    /* רקע ספרייה יוקרתי לכל האתר */
+    /* רקע ספרייה יוקרתי לכל האפליקציה */
     [data-testid="stAppViewContainer"] {
         background: linear-gradient(rgba(0,0,0,0.75), rgba(0,0,0,0.75)), 
         url('https://images.unsplash.com/photo-1507842217343-583bb7270b66?auto=format&fit=crop&w=1920&q=80') !important;
         background-size: cover !important; background-attachment: fixed !important;
     }
 
-    /* תיבות טקסט, מספרים ובחירה: רקע לבן, טקסט שחור מוחלט (Bold 900) */
+    /* תיבות טקסט, מספרים ובחירה: רקע לבן, טקסט שחור מודגש (Bold 900) */
     input, select, textarea, [data-baseweb="select"], .stNumberInput input {
         color: black !important; 
         background-color: white !important; 
@@ -48,13 +47,13 @@ st.markdown("""
         color: black !important; font-weight: bold !important;
     }
 
-    /* חיצים שחורים בולטים על רקע לבן בסיידבר (לנווט בטלפון בקלות) */
+    /* חיצים שחורים בולטים על רקע לבן בסיידבר */
     button[data-testid="sidebar-button"] svg { 
         fill: black !important; color: black !important; 
         background-color: white !important; border-radius: 4px; padding: 2px;
     }
 
-    /* כותרות וטקסט לבן עם צל שחור לקריאות */
+    /* כותרות וטקסט בלבן עם צל */
     h1, h2, h3, h4, p, label, span { color: white !important; text-shadow: 2px 2px 4px black; }
     
     /* תיבת העלאת קבצים - שחור על לבן */
@@ -67,12 +66,12 @@ st.markdown("""
     }
     div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 800 !important; }
 
-    /* סיידבר כהה יוקרתי */
+    /* סיידבר כהה */
     section[data-testid="stSidebar"] { background-color: #0f172a !important; }
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. מסך התחברות יוקרתי ---
+# --- 4. מסך התחברות ---
 if not st.session_state.logged_in:
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
@@ -91,8 +90,6 @@ if not st.session_state.logged_in:
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 with st.sidebar:
     st.markdown(f"<h3 style='text-align:center; color: #00D1FF;'>{st.session_state.user_name}</h3>", unsafe_allow_html=True)
-    st.markdown("<h1 style='color: #00D1FF; text-align: center; margin-top: -15px;'>NEXUS OS</h1>", unsafe_allow_html=True)
-    
     lang_choice = st.radio("Language / שפה", ["עברית", "English"], horizontal=True)
     st.session_state.lang = lang_choice
     st.divider()
@@ -105,8 +102,7 @@ with st.sidebar:
                                 "nav-link-selected": {"background-color": "#00D1FF", "color": "black"}
                            })
     
-    st.divider()
-    if st.button("🚪 Logout", use_container_width=True):
+    if st.button("Logout"):
         st.session_state.logged_in = False
         st.rerun()
 
@@ -114,12 +110,11 @@ df = get_all_grades()
 
 # --- 6. תוכן הדפים ---
 if selected == "Dashboard":
-    st.markdown(f"<h1 style='text-align: center; font-size: 3.5rem;'>🚀 Command Center</h1>", unsafe_allow_html=True)
+    st.title(f"🚀 Command Center: {st.session_state.user_name}")
     
-    # המדדים (Metrics)
     c1, c2 = st.columns(2)
     c1.metric("Average / ממוצע", f"{df['grade'].mean():.1f}" if not df.empty else "0.0")
-    c2.metric("Entries / משימות", len(df))
+    c2.metric("Total Entries / משימות", len(df))
     
     st.divider()
     
@@ -130,18 +125,17 @@ if selected == "Dashboard":
             sub = st.selectbox("Subject", ["Python", "Data Analyst", "SQL", "מתמטיקה", "אחר"])
             tp = st.text_input("Topic / נושא")
             grd = st.number_input("Grade / ציון", 0, 100, 90)
-            if st.form_submit_button("Save to Vault"):
+            if st.form_submit_button("Save"):
                 save_grade(sub, tp, grd)
                 st.toast("✅ Saved!")
                 st.rerun()
-    
     with col2:
-        st.subheader("Quick Upload / העלאת חומר")
-        st.file_uploader("Upload PDF/Docx for AI analysis", type=["pdf", "docx"])
+        st.subheader("Quick Upload / העלאה")
+        st.file_uploader("Upload PDF/Docx", type=["pdf", "docx"])
 
 elif selected == "AI Tutor":
     st.title("🤖 Nexus AI Assistant")
-    sub_choice = st.selectbox("Assign to Subject", ["General", "Python", "Data Analyst"])
+    sub_choice = st.selectbox("Subject", ["General", "Python", "Data Analyst"])
     
     if prompt := st.chat_input("Ask me anything..."):
         with st.chat_message("user"): st.write(prompt)
@@ -149,7 +143,7 @@ elif selected == "AI Tutor":
             try:
                 res_box = st.empty()
                 full_res = ""
-                # קריאה לבוט (התיקון החדש)
+                # קריאה לבוט המתוקן
                 for chunk in get_ai_response_stream(sub_choice, prompt):
                     full_res += chunk.text
                     res_box.markdown(full_res + "▌")
@@ -159,14 +153,9 @@ elif selected == "AI Tutor":
 
 elif selected == "History":
     st.title("📜 Grade History")
-    if df.empty:
-        st.info("No records found in the vault.")
-    else:
-        st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
+    st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
 
 elif selected == "Settings":
-    st.title("⚙️ System Settings")
-    st.write(f"Logged in as: **{st.session_state.user_name}**")
-    if st.button("🚨 Clear All Database Data"):
+    if st.button("🚨 Clear All Data"):
         clear_db()
         st.rerun()
