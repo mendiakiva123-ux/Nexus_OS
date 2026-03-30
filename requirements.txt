@@ -4,4 +4,4 @@ pandas
 plotly
 supabase
 st-supabase-connection
-google-generativeai
+requests
