@@ -2,7 +2,6 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import pandas as pd
 import plotly.express as px
-import datetime
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream
 
@@ -10,7 +9,7 @@ from ai_manager import get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | Elite", layout="wide")
 init_db()
 
-# --- 2. עיצוב CSS (שחור על לבן + חיצים שחורים) ---
+# --- 2. עיצוב CSS (טקסט שחור מודגש + חיצים שחורים) ---
 st.markdown("""
     <style>
     /* מהירות וביצועים */
@@ -88,7 +87,6 @@ df = get_all_grades()
 if selected == "Dashboard":
     st.title(f"🚀 Command Center: {st.session_state.user_name}")
     
-    # מדדים שחזרו
     c1, c2 = st.columns(2)
     c1.metric("Average Score", f"{df['grade'].mean():.1f}" if not df.empty else "0.0")
     c2.metric("Total Entries", len(df))
@@ -107,11 +105,11 @@ if selected == "Dashboard":
                 st.rerun()
     with col2:
         st.subheader("Quick Upload")
-        st.file_uploader("Upload study materials", type=["pdf", "docx"])
+        st.file_uploader("Upload materials", type=["pdf", "docx"])
 
 elif selected == "AI Tutor":
     st.title("🤖 Nexus AI Assistant")
-    sub_choice = st.selectbox("Current Subject", ["General", "Python", "Data"])
+    sub_choice = st.selectbox("Current Subject", ["General", "Python", "Data Analyst"])
     
     if prompt := st.chat_input("Ask me anything..."):
         with st.chat_message("user"): st.write(prompt)
