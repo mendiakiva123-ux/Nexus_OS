@@ -5,11 +5,13 @@ import time
 def get_ai_response_stream(subject, prompt):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # הפתרון הסופי: מעבר למודל gemini-pro הקלאסי והיציב
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
+    # כתובת ראשית (Flash)
+    url_flash = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
+    # כתובת גיבוי ברזל (Pro) למקרה של 404
+    url_pro = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
-    context = f"אתה עוזר אקדמי במערכת Nexus OS. נושא השיחה הנוכחי: {subject}."
+    context = f"אתה עוזר חכם במערכת Nexus OS. נושא: {subject}."
     
     payload = {
         "contents": [{"parts": [{"text": f"{context}\n\nשאלה: {prompt}"}]}],
@@ -17,23 +19,24 @@ def get_ai_response_stream(subject, prompt):
     }
     
     try:
-        response = requests.post(url, headers=headers, json=payload)
+        # ניסיון ראשון
+        response = requests.post(url_flash, headers=headers, json=payload)
         
+        # אם קיבלנו 404, עוברים מיד לגיבוי בלי שהמשתמש ירגיש
+        if response.status_code == 404:
+            response = requests.post(url_pro, headers=headers, json=payload)
+            
         if response.status_code == 200:
-            data = response.json()
-            try:
-                text = data['candidates'][0]['content']['parts'][0]['text']
-                # אפקט הדפסה אנושי (סטרימינג חלק)
-                for char in text:
-                    yield char
-                    time.sleep(0.005) 
-            except Exception as e:
-                yield f"🚨 שגיאה בפענוח התשובה: {str(e)}"
+            text = response.json()['candidates'][0]['content']['parts'][0]['text']
+            # אפקט הדפסה חלקה
+            for char in text:
+                yield char
+                time.sleep(0.005)
         else:
-            yield f"🚨 השרת של גוגל חסם את הבקשה. קוד: {response.status_code}. הודעה: {response.text}"
+            yield f"🚨 שגיאת שרת גוגל: {response.status_code} - {response.text}"
             
     except Exception as e:
-        yield f"🚨 שגיאת רשת קריטית: {str(e)}"
+        yield f"🚨 שגיאת תקשורת: {str(e)}"
 
 def process_file_to_db(file_path, subject):
     pass
