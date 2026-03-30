@@ -8,13 +8,13 @@ from ai_manager import get_ai_response_stream
 st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
-# --- 2. מילון שפות ומקצועות לימוד ---
+# --- 2. מילון שפות והמקצועות המעודכנים שביקשת ---
 if 'lang' not in st.session_state:
     st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
 
-# הרשימה שלך (השארתי את 'כללי' ראשון עבור הבוט, אבל נסתיר אותו בהזנת ציונים)
+# הרשימה המעודכנת בדיוק כפי שביקשת
 SUBJECTS_HE = ["General / כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
 SUBJECTS_EN = ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Computer Science", "Other"]
 
@@ -34,7 +34,7 @@ t = {
 }
 cur = t[st.session_state.lang]
 
-# --- 3. עיצוב חכם ויוקרתי (Glassmorphism + קריאות גבוהה) ---
+# --- 3. עיצוב Glassmorphism ---
 st.markdown("""
     <style>
     * { transition: none !important; animation: none !important; }
@@ -50,7 +50,6 @@ st.markdown("""
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
     
-    /* קלפי הנתונים */
     div[data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.05) !important;
         border: 1px solid rgba(0, 209, 255, 0.3) !important;
@@ -59,7 +58,6 @@ st.markdown("""
     div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3rem !important; }
     h1, h2, h3, p, label, span { color: #e0e0e0 !important; text-shadow: 1px 1px 2px black; }
     
-    /* תיבות קלט ורשימות - שחור על לבן ברור לחלוטין */
     input, select, textarea, [data-baseweb="select"], .stNumberInput input {
         background: rgba(255, 255, 255, 0.95) !important; color: #000000 !important;
         border-radius: 10px !important; font-weight: 900 !important;
@@ -68,7 +66,6 @@ st.markdown("""
         color: black !important; font-weight: bold !important; background-color: white !important;
     }
     
-    /* חיצים שחורים בולטים */
     button[data-testid="sidebar-button"] svg { 
         fill: black !important; color: black !important; background-color: white !important; border-radius: 4px; padding: 2px;
     }
@@ -77,12 +74,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- 4. תפריט ניווט יוקרתי (ללא סיסמה) ---
+# --- 4. תפריט ניווט ---
 with st.sidebar:
     st.markdown("<h2 style='text-align:center; color:#00D1FF; letter-spacing: 2px;'>NEXUS OS</h2>", unsafe_allow_html=True)
     st.markdown("<p style='text-align:center; color:#aaaaaa; font-size:14px;'>Welcome, Mendi</p>", unsafe_allow_html=True)
     
-    # מתג שפות
     lang_choice = st.radio("", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
@@ -127,7 +123,7 @@ if selected == cur["dash"]:
     with col1:
         st.markdown(f"### 📝 {cur['add']}")
         with st.form("grade_form", clear_on_submit=True):
-            # מציג את כל המקצועות חוץ מ"כללי" להזנת ציונים
+            # מציג את כל המקצועות חוץ מ"כללי"
             sub = st.selectbox(cur["sub"], cur["subjects"][1:]) 
             tp = st.text_input(cur["topic"])
             grd = st.number_input(cur["grade"], 0, 100, 90)
@@ -140,10 +136,8 @@ if selected == cur["dash"]:
 
 elif selected == cur["tutor"]:
     st.markdown(f"<h1>🧠 {cur['tutor']}</h1>", unsafe_allow_html=True)
-    # כאן "כללי" מופיע ראשון וזמין לבוט
     sub_choice = st.selectbox(cur["sub"], cur["subjects"]) 
     
-    # הדפסת היסטוריית השיחה
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
