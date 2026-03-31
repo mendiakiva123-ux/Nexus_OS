@@ -6,147 +6,169 @@ import plotly.express as px
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
-# --- 1. הגדרות ועיצוב ---
-st.set_page_config(page_title="Nexus OS", layout="wide", initial_sidebar_state="expanded")
+# --- 1. אתחול והגדרות ---
+st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="collapsed")
 init_db()
 
+# ברירת מחדל - עברית
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# עיצוב מודרני מקיף
+# --- 2. עיצוב צבעוני ומקצועי (Neon-Glass) ---
 st.markdown("""
     <style>
-    /* רקע וצבעים כלליים */
-    [data-testid="stAppViewContainer"] { background: #0b0e14 !important; color: #ffffff !important; }
-    section[data-testid="stSidebar"] { background-color: #161b22 !important; border-right: 1px solid #30363d; }
+    /* רקע מדורג וחי */
+    [data-testid="stAppViewContainer"] {
+        background: linear-gradient(135deg, #0f2027 0%, #203a43 50%, #2c5364 100%) !important;
+        color: white;
+    }
     
-    /* כרטיסי מדדים */
+    [data-testid="collapsedControl"] { display: none !important; }
+
+    /* כרטיסי מדדים צבעוניים */
     div[data-testid="stMetric"] {
-        background: #1c2128 !important; border: 1px solid #30363d !important;
-        border-radius: 15px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+        background: rgba(255, 255, 255, 0.1) !important;
+        border-left: 5px solid #00D1FF !important;
+        border-radius: 15px;
+        padding: 20px;
+        backdrop-filter: blur(10px);
+        box-shadow: 0 4px 15px rgba(0,0,0,0.3);
     }
-    div[data-testid="stMetricValue"] { color: #58a6ff !important; font-size: 2.5rem !important; }
     
-    /* כפתורים */
+    /* כפתורים צבעוניים */
     .stButton>button {
-        background: #238636 !important; color: white !important;
-        border-radius: 8px; border: none; font-weight: bold; width: 100%; height: 45px;
+        background: linear-gradient(90deg, #ff00cc, #3333ff) !important;
+        color: white !important;
+        border: none;
+        border-radius: 12px;
+        font-weight: bold;
+        height: 50px;
+        transition: 0.3s;
     }
-    .stButton>button:hover { background: #2ea043 !important; }
-    
-    /* קלט - קריא ונוח */
+    .stButton>button:hover { transform: translateY(-2px); box-shadow: 0 5px 15px rgba(255, 0, 204, 0.4); }
+
+    /* קלט - קריא ואיכותי */
     input, select, textarea, [data-baseweb="select"] {
-        background: #ffffff !important; color: #000000 !important;
-        border-radius: 8px !important; font-weight: bold !important;
+        background: white !important;
+        color: black !important;
+        border-radius: 10px !important;
+        font-weight: 600 !important;
     }
     
-    /* צ'אט */
-    [data-testid="stChatMessage"] { background: #1c2128 !important; border-radius: 15px; margin-bottom: 10px; }
+    /* התאמה לטלפון */
+    @media (max-width: 640px) {
+        h1 { font-size: 2rem !important; }
+        div[data-testid="stMetric"] { margin-bottom: 10px; }
+    }
     </style>
     """, unsafe_allow_html=True)
 
-# RTL לעברית
+# תמיכה ב-RTL (ימין לשמאל)
 if st.session_state.lang == "עברית":
-    st.markdown("<style>div[data-testid='stChatMessageContent'] * { direction: rtl; text-align: right; } textarea { direction: rtl; }</style>", unsafe_allow_html=True)
+    st.markdown("<style>[data-testid='stChatMessageContent'] * { direction: rtl; text-align: right; } [data-testid='stChatInput'] textarea { direction: rtl; text-align: right; }</style>", unsafe_allow_html=True)
 
-# --- 2. סיידבר (ניווט וניהול) ---
-with st.sidebar:
-    st.markdown("<h1 style='text-align:center; color:#58a6ff;'>NEXUS OS</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align:center; color:#8b949e;'>Elite Academic Core</p>", unsafe_allow_html=True)
-    st.divider()
-    
-    selected = option_menu(
-        menu_title=None,
-        options=["Dashboard", "AI Tutor", "History", "Settings"],
-        icons=["grid-fill", "cpu-fill", "clock-history", "gear-fill"],
-        default_index=0,
-        styles={
-            "container": {"background-color": "transparent"},
-            "nav-link": {"color": "#c9d1d9", "font-weight": "bold"},
-            "nav-link-selected": {"background-color": "#1f6feb", "color": "white"}
-        }
-    )
-    
-    st.divider()
-    if st.button("🗑️ Clear Chat"):
-        st.session_state.chat_history = []
-        st.rerun()
+# תרגומים
+t = {
+    "עברית": {
+        "dash": "דאשבורד", "tutor": "AI Tutor 🤖", "hist": "היסטוריה", "set": "הגדרות",
+        "avg": "ממוצע ציונים", "tasks": "סה\"כ רשומות", "add": "הוספת נתונים",
+        "sub": "מקצוע", "top": "נושא", "grd": "ציון", "save": "שמור עכשיו",
+        "learn": "טען חומר ל-AI", "ask": "שאל את Nexus AI...",
+        "subjects": ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"]
+    },
+    "English": {
+        "dash": "Dashboard", "tutor": "AI Tutor", "hist": "History", "set": "Settings",
+        "avg": "Average Grade", "tasks": "Total Tasks", "add": "Add Record",
+        "sub": "Subject", "top": "Topic", "grd": "Grade", "save": "Save Now",
+        "learn": "Teach AI", "ask": "Ask Nexus AI...",
+        "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
+    }
+}
+cur = t[st.session_state.lang]
+
+# כותרת
+st.markdown(f"<h1 style='text-align:center; color:#00D1FF; text-shadow: 0 0 10px #00D1FF;'>NEXUS OS | CORE</h1>", unsafe_allow_html=True)
+st.markdown(f"<p style='text-align:center; opacity:0.8;'>Student Intelligence Platform | Mendi 🎓</p>", unsafe_allow_html=True)
+
+# תפריט עליון צבעוני
+selected = option_menu(None, [cur["dash"], cur["tutor"], cur["hist"], cur["set"]], 
+    icons=["grid-fill", "cpu-fill", "clock-history", "gear-fill"], orientation="horizontal",
+    styles={
+        "container": {"background-color": "rgba(255,255,255,0.05)", "border-radius": "15px"},
+        "nav-link-selected": {"background-color": "#3333ff", "color": "white"}
+    })
 
 df = get_all_grades()
 
-# --- 3. דפי המערכת ---
+# --- דפים ---
 
-if selected == "Dashboard":
-    st.markdown("## 📊 Dashboard Overview")
+if selected == cur["dash"]:
+    # מדדים למעלה
     c1, c2, c3 = st.columns(3)
-    avg = df['grade'].mean() if not df.empty else 0.0
-    c1.metric("Average", f"{avg:.1f}")
-    c2.metric("Records", len(df))
-    c3.metric("Status", "Operational")
+    avg_val = df['grade'].mean() if not df.empty else 0.0
+    c1.metric(cur["avg"], f"{avg_val:.1f}")
+    c2.metric(cur["tasks"], len(df))
+    c3.metric("Status", "Operational 🟢")
     
-    st.divider()
-    
-    col1, col2 = st.columns([1, 1.2])
-    with col1:
-        st.markdown("### 📝 Log Grade")
-        with st.form("add_grade", clear_on_submit=True):
-            sub = st.selectbox("Subject", ["מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"])
-            tp = st.text_input("Topic")
-            grd = st.number_input("Grade", 0, 100, 90)
-            if st.form_submit_button("Save"):
-                save_grade(sub, tp, grd); st.rerun()
-                
-        st.markdown("### 📁 Study Material")
-        up = st.file_uploader("Upload PDF/Docx/Image", type=["pdf", "docx", "png", "jpg", "jpeg"])
-        if up and st.button("🧠 Learn Content"):
-            with st.spinner("Processing..."):
-                st.session_state.file_contexts[sub] = extract_text_from_file(up)
-                st.success("Context Uploaded!")
-                
-    with col2:
-        st.markdown("### 📈 Trend Line")
+    # אזור עבודה
+    l, r = st.columns([1, 1.3])
+    with l:
+        st.markdown(f"### 📥 {cur['add']}")
+        with st.form("main_form", clear_on_submit=True):
+            s = st.selectbox(cur["sub"], cur["subjects"])
+            tp = st.text_input(cur["top"])
+            g = st.number_input(cur["grd"], 0, 100, 90)
+            if st.form_submit_button(cur["save"]):
+                save_grade(s, tp, g); st.rerun()
+        
+        st.markdown(f"### 📚 {cur['learn']}")
+        up = st.file_uploader("", type=["pdf", "docx", "png", "jpg"])
+        if up and st.button(cur["learn"]):
+            with st.spinner("Learning..."):
+                st.session_state.file_contexts[s] = extract_text_from_file(up)
+                st.success("Knowledge Added!")
+
+    with r:
+        st.markdown("### 📈 Grade Analysis")
         if not df.empty:
-            fig = px.line(df.sort_values('date'), x='date', y='grade', color='subject', markers=True, template="plotly_dark")
-            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)")
+            fig = px.line(df.sort_values('date'), x='date', y='grade', color='subject', markers=True)
+            fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig, use_container_width=True)
 
-elif selected == "AI Tutor":
-    st.markdown("## 🧠 AI Academic Tutor")
-    sub_choice = st.selectbox("Current Subject Context:", ["General / כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"])
+elif selected == cur["tutor"]:
+    sub_sel = st.selectbox(cur["sub"], cur["subjects"])
+    ctx = st.session_state.file_contexts.get(sub_sel, "")
     
-    ctx = st.session_state.file_contexts.get(sub_choice, "")
-    if ctx: st.info("📚 Using your study materials for this subject.")
-
-    chat_container = st.container(height=500)
+    chat_box = st.container(height=450)
     for m in st.session_state.chat_history:
-        with chat_container.chat_message(m["role"]): st.markdown(m["content"])
-        
-    if prompt := st.chat_input("Ask Nexus AI..."):
+        with chat_box.chat_message(m["role"]): st.markdown(m["content"])
+    
+    if prompt := st.chat_input(cur["ask"]):
         st.session_state.chat_history.append({"role": "user", "content": prompt})
-        with chat_container.chat_message("user"): st.markdown(prompt)
+        with chat_box.chat_message("user"): st.markdown(prompt)
         
-        with chat_container.chat_message("assistant"):
-            res_box = st.empty()
-            full_res = ""
-            # השימוש במנוע ה-requests המקורי שלך
-            for chunk in get_ai_response_stream(sub_choice, prompt, file_context=ctx):
-                full_res += chunk
-                res_box.markdown(full_res + " ▌")
-            res_box.markdown(full_res)
-            st.session_state.chat_history.append({"role": "assistant", "content": full_res})
+        with chat_box.chat_message("assistant"):
+            response_placeholder = st.empty()
+            full_response = ""
+            # הזרמה ישירה מהמנוע שעובד לך
+            for chunk in get_ai_response_stream(sub_sel, prompt, file_context=ctx):
+                full_response += chunk
+                response_placeholder.markdown(full_response + " ▌")
+            response_placeholder.markdown(full_response)
+            st.session_state.chat_history.append({"role": "assistant", "content": full_response})
 
-elif selected == "History":
-    st.markdown("## 📜 Academic Records")
+elif selected == cur["hist"]:
     st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
 
-elif selected == "Settings":
-    st.markdown("## ⚙️ System Settings")
-    st.markdown("### 🌐 Language / שפה")
-    lang = st.radio("", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
-    if lang != st.session_state.lang:
-        st.session_state.lang = lang; st.rerun()
+elif selected == cur["set"]:
+    st.markdown("### ⚙️ Settings")
+    # שינוי שפה
+    new_l = st.radio("Select Language / בחר שפה", ["עברית", "English"], 
+                     index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
+    if new_l != st.session_state.lang:
+        st.session_state.lang = new_l; st.rerun()
         
     st.divider()
-    if st.button("🚨 Purge All Data"):
-        clear_db(); st.rerun()
+    if st.button("🗑️ Clear Chat"): st.session_state.chat_history = []; st.rerun()
+    if st.button("🚨 Purge DB"): clear_db(); st.rerun()
