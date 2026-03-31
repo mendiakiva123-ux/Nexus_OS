@@ -7,14 +7,14 @@ from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
 # --- הגדרות ---
-st.set_page_config(page_title="Nexus OS | Vivid", layout="wide", initial_sidebar_state="collapsed")
+st.set_page_config(page_title="Nexus OS", layout="wide", initial_sidebar_state="collapsed")
 init_db()
 
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- עיצוב Vivid & Live ---
+# --- עיצוב Vivid (צבעוני ונוח) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -29,16 +29,14 @@ st.markdown("""
         border: 1px solid rgba(255, 255, 255, 0.3);
     }
     div[data-testid="stMetricValue"] { color: #ffffff !important; font-weight: 900 !important; }
-    div[data-testid="stMetricLabel"] { color: #00d4ff !important; font-weight: bold !important; }
 
     .stButton>button {
         background: linear-gradient(45deg, #00f2fe 0%, #4facfe 100%) !important;
         color: #000 !important; border-radius: 15px; font-weight: 900; height: 50px; border: none;
     }
-    .stButton>button:hover { transform: scale(1.05); box-shadow: 0 0 20px #00f2fe; }
 
     [data-testid="stChatMessage"] { background: rgba(0, 0, 0, 0.3) !important; border-radius: 15px; }
-    [data-testid="stChatMessageContent"] p { color: #ffffff !important; font-weight: 500 !important; }
+    [data-testid="stChatMessageContent"] p { color: white !important; font-size: 1.1rem !important; }
 
     input, select, textarea, [data-baseweb="select"] {
         background: white !important; color: black !important; font-weight: bold !important; border-radius: 10px !important;
@@ -52,7 +50,7 @@ if st.session_state.lang == "עברית":
 # כותרת
 st.markdown(f"<h1 style='text-align:center; color:#ffffff; text-shadow: 0 0 20px #00d4ff;'>NEXUS OS | CORE</h1>", unsafe_allow_html=True)
 
-# תפריט
+# תפריט אופקי
 selected = option_menu(None, ["דאשבורד", "AI Tutor", "היסטוריה", "הגדרות"], 
     icons=["grid-fill", "cpu-fill", "clock-history", "gear-fill"], orientation="horizontal",
     styles={"container": {"background-color": "rgba(255,255,255,0.1)"}, "nav-link-selected": {"background-color": "#4facfe", "color": "black"}})
@@ -102,6 +100,7 @@ elif selected == "AI Tutor":
         st.session_state.chat_history.append({"role": "user", "content": p})
         with chat_box.chat_message("user"): st.markdown(p)
         with chat_box.chat_message("assistant"):
+            # שימוש ב-st.write_stream לחיבור הישיר
             full_res = st.write_stream(get_ai_response_stream(sub_sel, p, file_context=ctx))
         st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
@@ -114,5 +113,5 @@ elif selected == "הגדרות":
     if lang != st.session_state.lang:
         st.session_state.lang = lang; st.rerun()
     st.divider()
-    if st.button("🗑️ נקה צ'אט"): st.session_state.chat_history = []; st.rerun()
+    if st.button("🗑️ נקה היסטוריית צ'אט"): st.session_state.chat_history = []; st.rerun()
     if st.button("🚨 איפוס נתונים"): clear_db(); st.rerun()
