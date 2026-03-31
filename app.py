@@ -5,7 +5,7 @@ import plotly.express as px
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
-# --- Core Setup ---
+# --- Setup ---
 st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
@@ -13,21 +13,23 @@ if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- מערכת תרגום ---
+# --- Translation Mapping (תיקון ה-KeyError) ---
 t = {
     "עברית": {
         "title": "NEXUS OS", "welcome": "שלום, מנדי", "dash": "מרכז שליטה", "tutor": "Nexus AI",
-        "hist": "ארכיון ציונים", "set": "מערכת", "avg": "ממוצע אקדמי", "total": "רשומות",
-        "add": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "save": "סנכרן נתונים",
-        "up": "📁 סריקת חומר", "learn": "🧠 למד", "ask": "הזן שאילתה...", "purge": "נקה צ'אט",
-        "reset": "🚨 איפוס מסד נתונים", "subjects": ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"]
+        "hist": "ארכיון", "set": "מערכת", "avg": "ממוצע אקדמי", "total": "רשומות",
+        "status": "מצב מערכת", "opt": "אופטימלי", "add": "📝 הזנת נתונים", "sub": "מקצוע",
+        "top": "נושא", "grd": "ציון", "save": "סנכרן נתונים", "up": "📁 טעינת חומר",
+        "learn": "🧠 למד", "ask": "הזן שאילתה...", "purge": "נקה צ'אט", "reset": "🚨 איפוס מסד נתונים",
+        "subjects": ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"]
     },
     "English": {
         "title": "NEXUS OS", "welcome": "Welcome, Mendi", "dash": "Command Center", "tutor": "Nexus AI",
-        "hist": "Grade Archive", "set": "System", "avg": "Academic Avg", "total": "Records",
-        "add": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "save": "Sync Data",
-        "up": "📁 Neural Scan", "learn": "🧠 Ingest", "ask": "Input query...", "purge": "Purge Chat",
-        "reset": "🚨 Reset DB", "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
+        "hist": "Archive", "set": "System", "avg": "Academic Avg", "total": "Records",
+        "status": "System Status", "opt": "Optimal", "add": "📝 Data Input", "sub": "Subject",
+        "top": "Topic", "grd": "Grade", "save": "Sync Data", "up": "📁 Upload",
+        "learn": "🧠 Ingest", "ask": "Input query...", "purge": "Purge Chat", "reset": "🚨 Reset DB",
+        "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
     }
 }
 cur = t[st.session_state.lang]
@@ -37,11 +39,11 @@ st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
     [data-testid="stAppViewContainer"] {{ background: linear-gradient(225deg, #050505 0%, #001219 50%, #002233 100%) !important; color: white; }}
-    div[data-testid="stMetric"] {{ background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(0, 209, 255, 0.3) !important; border-radius: 20px; padding: 25px; backdrop-filter: blur(20px); }}
-    div[data-testid="stMetricValue"] {{ color: #00D1FF !important; font-family: 'Orbitron', sans-serif; text-shadow: 0 0 10px #00D1FF; }}
-    .stButton>button {{ background: transparent !important; color: #00D1FF !important; border: 2px solid #00D1FF !important; border-radius: 12px; font-weight: 900; width: 100%; transition: 0.3s; }}
+    div[data-testid="stMetric"] {{ background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(0, 209, 255, 0.3) !important; border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }}
+    div[data-testid="stMetricValue"] {{ color: #00D1FF !important; font-family: 'Orbitron', sans-serif; }}
+    .stButton>button {{ background: transparent !important; color: #00D1FF !important; border: 2px solid #00D1FF !important; border-radius: 12px; font-weight: 900; width: 100%; }}
     .stButton>button:hover {{ background: #00D1FF !important; color: #000 !important; box-shadow: 0 0 25px #00D1FF; }}
-    input, select, textarea {{ background: white !important; color: black !important; font-weight: bold !important; border-radius: 10px !important; }}
+    input, select, textarea {{ background: white !important; color: black !important; font-weight: bold !important; }}
     h1 {{ font-family: 'Orbitron', sans-serif; background: linear-gradient(90deg, #00D1FF, #BC13FE); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }}
     </style>
     """, unsafe_allow_html=True)
@@ -63,14 +65,13 @@ with st.sidebar:
 
 df = get_all_grades()
 
-# --- Page Pages ---
 if selected == cur["dash"]:
     st.markdown(f"<h1>{cur['dash']}</h1>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
     avg_v = df['grade'].mean() if not df.empty else 0.0
     c1.metric(cur["avg"], f"{avg_v:.1f}")
     c2.metric(cur["total"], len(df))
-    c3.metric(cur["status"], "Optimal")
+    c3.metric(cur["status"], cur["opt"]) # שימוש בערכים מהמילון למניעת KeyError
     
     l, r = st.columns([1, 1.2])
     with l:
@@ -85,7 +86,7 @@ if selected == cur["dash"]:
         up = st.file_uploader("", type=["pdf", "docx", "png", "jpg", "jpeg"])
         if up and st.button(cur["learn"]):
             st.session_state.file_contexts[sub] = extract_text_from_file(up)
-            st.success("Knowledge Loaded!")
+            st.success("Loaded!")
 
     with r:
         if not df.empty:
