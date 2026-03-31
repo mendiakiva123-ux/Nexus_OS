@@ -2,7 +2,7 @@ streamlit
 streamlit-option-menu
 pandas
 plotly
-google-generativeai>=0.8.3
+google-generativeai
 PyPDF2
 python-docx
 Pillow
