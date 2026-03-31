@@ -13,21 +13,21 @@ if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- מערכת תרגום אחידה ---
+# --- Translation Mapping ---
 t = {
     "עברית": {
-        "title": "NEXUS OS", "welcome": "ברוך הבא, מנדי", "dash": "דאשבורד", "tutor": "AI Tutor 🤖",
-        "hist": "היסטוריה", "set": "הגדרות", "avg": "ממוצע אקדמי", "total": "רשומות", "status": "מצב מערכת",
-        "add": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "save": "שמור נתונים",
-        "upload": "📁 טעינת חומר", "learn": "🧠 למד חומר", "ask": "שאל את Nexus...", "purge": "נקה צ'אט",
+        "dash": "מרכז שליטה", "tutor": "Nexus AI", "hist": "ארכיון", "set": "מערכת",
+        "avg": "ממוצע אקדמי", "total": "רשומות", "status": "מצב ליבה", "add": "📝 הזנת נתונים",
+        "sub": "מקצוע", "top": "נושא", "grd": "ציון", "save": "סנכרן נתונים",
+        "up": "📁 טעינת חומר", "learn": "🧠 למד", "ask": "הזן שאילתה...", "purge": "נקה צ'אט",
         "reset": "🚨 איפוס מסד נתונים", "subjects": ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"]
     },
     "English": {
-        "title": "NEXUS OS", "welcome": "Welcome, Mendi", "dash": "Dashboard", "tutor": "AI Tutor 🤖",
-        "hist": "History", "set": "Settings", "avg": "Academic Avg", "total": "Records", "status": "Status",
-        "add": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "save": "Save Data",
-        "upload": "📁 Upload Material", "learn": "🧠 Ingest Material", "ask": "Ask Nexus...", "purge": "Purge Chat",
-        "reset": "🚨 Reset Database", "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
+        "dash": "Command Center", "tutor": "Nexus AI", "hist": "Archive", "set": "System",
+        "avg": "Academic Avg", "total": "Records", "status": "Status", "add": "📝 Data Input",
+        "sub": "Subject", "top": "Topic", "grd": "Grade", "save": "Sync Data",
+        "up": "📁 Upload", "learn": "🧠 Ingest", "ask": "Input query...", "purge": "Purge Chat",
+        "reset": "🚨 Reset DB", "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
     }
 }
 cur = t[st.session_state.lang]
@@ -42,7 +42,7 @@ st.markdown(f"""
     .stButton>button {{ background: transparent !important; color: #00D1FF !important; border: 2px solid #00D1FF !important; border-radius: 12px; font-weight: 900; width: 100%; }}
     .stButton>button:hover {{ background: #00D1FF !important; color: #000 !important; box-shadow: 0 0 25px #00D1FF; }}
     input, select, textarea {{ background: white !important; color: black !important; font-weight: bold !important; }}
-    h1, h2 {{ font-family: 'Orbitron', sans-serif; background: linear-gradient(90deg, #00D1FF, #BC13FE); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }}
+    h1 {{ font-family: 'Orbitron', sans-serif; background: linear-gradient(90deg, #00D1FF, #BC13FE); -webkit-background-clip: text; -webkit-text-fill-color: transparent; text-align: center; }}
     </style>
     """, unsafe_allow_html=True)
 
@@ -51,8 +51,7 @@ if st.session_state.lang == "עברית":
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown(f"<h2>{cur['title']}</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center; color:#888;'>{cur['welcome']}</p>", unsafe_allow_html=True)
+    st.markdown(f"<h2>NEXUS OS</h2>", unsafe_allow_html=True)
     lang_choice = st.radio("", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice; st.rerun()
@@ -67,8 +66,8 @@ df = get_all_grades()
 if selected == cur["dash"]:
     st.markdown(f"<h1>{cur['dash']}</h1>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    avg_val = df['grade'].mean() if not df.empty else 0.0
-    c1.metric(cur["avg"], f"{avg_val:.1f}")
+    avg_v = df['grade'].mean() if not df.empty else 0.0
+    c1.metric(cur["avg"], f"{avg_v:.1f}")
     c2.metric(cur["total"], len(df))
     c3.metric(cur["status"], "Optimal")
     
@@ -81,11 +80,11 @@ if selected == cur["dash"]:
             grd = st.number_input(cur["grd"], 0, 100, 90)
             if st.form_submit_button(cur["save"]): save_grade(sub, tp, grd); st.rerun()
         
-        st.markdown(f"### {cur['upload']}")
+        st.markdown(f"### {cur['up']}")
         up = st.file_uploader("", type=["pdf", "docx", "png", "jpg", "jpeg"])
         if up and st.button(cur["learn"]):
             st.session_state.file_contexts[sub] = extract_text_from_file(up)
-            st.success("Knowledge Loaded!")
+            st.success("Loaded!")
 
     with r:
         if not df.empty:
