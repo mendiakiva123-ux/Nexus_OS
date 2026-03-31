@@ -6,6 +6,7 @@ import PyPDF2
 import docx
 import base64
 
+# --- פונקציית סריקת הקבצים (PDF, Word, תמונות) ---
 def extract_text_from_file(uploaded_file):
     text = ""
     try:
@@ -21,7 +22,7 @@ def extract_text_from_file(uploaded_file):
                 
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"]
-            # שימוש בגרסת v1 היציבה שעבדה לך מעולה!
+            # מנוע V1 היציב לקריאת תמונות
             url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
             
             image_bytes = uploaded_file.getvalue()
@@ -46,10 +47,11 @@ def extract_text_from_file(uploaded_file):
         return f"🚨 Error extracting text: {e}"
     return text
 
+# --- מנוע הבוט הראשי (סטרימינג מהיר ויציב ללא שגיאות) ---
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # חיבור ישיר, פשוט ויציב לגרסה V1 עם סטרימינג
+    # חיבור ישיר ל-V1 היציב (1,500 בקשות ביום)
     stream_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
@@ -65,19 +67,16 @@ def get_ai_response_stream(subject, prompt, file_context=""):
     if file_context:
         system_prompt += f"\n\nPRIORITY CONTEXT (User's Study Material):\n<study_material>\n{file_context[:15000]}\n</study_material>\nAlways base your answers primarily on this material if relevant."
     
+    # הסרנו את ה-tools שעשו את ה-400, עכשיו הפיילוד נקי וחוקי!
     payload = {
-        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}],
-        "tools": [{"googleSearch": {}}] # כאן חיברנו אותו לאינטרנט
+        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}]
     }
     
     try:
         res = requests.post(stream_url, headers=headers, json=payload, stream=True)
-        res.encoding = 'utf-8' 
+        res.encoding = 'utf-8' # שומר על עברית תקינה
         
-        if res.status_code == 429:
-            yield "🚨 שגיאת עומס מגוגל. מכיוון שעברנו למודל היציב, זה אמור להשתחרר תוך דקה לכל היותר. נסה שוב."
-            return
-        elif res.status_code != 200:
+        if res.status_code != 200:
             yield f"🚨 שגיאה בשרת גוגל: {res.status_code} - {res.text}"
             return
             
