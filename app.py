@@ -47,17 +47,14 @@ st.markdown("""
     div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3.5rem !important; }
     h1, h2, h3, p, label, span { color: #e0e0e0 !important; text-shadow: 1px 1px 2px black; }
     input, select, textarea, [data-baseweb="select"], .stNumberInput input { background: rgba(255, 255, 255, 0.95) !important; color: #000000 !important; border-radius: 10px !important; font-weight: 900 !important; }
-    .stButton>button { background: linear-gradient(90deg, #00D1FF 0%, #007BFF 100%); color: white !important; border-radius: 25px; font-weight: bold; }
+    .stButton>button { background: linear-gradient(90deg, #00D1FF 0%, #007BFF 100%); color: white !important; border-radius: 25px; font-weight: bold; border:none; }
     </style>
     """, unsafe_allow_html=True)
 
 if st.session_state.lang == "עברית":
     st.markdown("<style>[data-testid='stChatMessageContent'], [data-testid='stChatMessageContent'] * { direction: rtl !important; text-align: right !important; } [data-testid='stChatInput'] textarea { direction: rtl !important; text-align: right !important; }</style>", unsafe_allow_html=True)
 
-# ברכה חכמה
-hour = datetime.datetime.now().hour
-greeting = "בוקר טוב" if 5 <= hour < 12 else "צהריים טובים" if 12 <= hour < 17 else "ערב טוב" if 17 <= hour < 21 else "לילה טוב"
-st.markdown(f"<h1 style='text-align:center; color:#00D1FF;'>NEXUS OS</h1><p style='text-align:center;'>{greeting}, Mendi 🎓</p>", unsafe_allow_html=True)
+st.markdown(f"<h1 style='text-align:center; color:#00D1FF;'>NEXUS OS</h1>", unsafe_allow_html=True)
 
 selected = option_menu(None, [cur["dash"], cur["tutor"], cur["history"], cur["settings"]], icons=["grid-1x2-fill", "cpu-fill", "clock-history", "gear-fill"], default_index=0, orientation="horizontal", styles={"container": {"background-color": "rgba(0,0,0,0.3)"}, "nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.2)", "color": "#00D1FF"}})
 
@@ -84,16 +81,15 @@ if selected == cur["dash"]:
         upload_sub = st.selectbox("Assign material to:", cur["subjects"][1:], key="upload_sub")
         uploaded_file = st.file_uploader("PDF / Docx / Images", type=["pdf", "docx", "png", "jpg", "jpeg"])
         if uploaded_file and st.button("🧠 Upload to AI Brain"):
-            st.session_state.file_contexts[upload_sub] = extract_text_from_file(uploaded_file)
-            st.success("Learned successfully!")
+            with st.spinner("Extracting..."):
+                st.session_state.file_contexts[upload_sub] = extract_text_from_file(uploaded_file)
+                st.success("Learned successfully!")
 
     with col_right:
         if not df.empty:
             fig = px.line(df.sort_values(by='date'), x='date', y='grade', color='subject', markers=True)
             fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig, use_container_width=True)
-        else:
-            st.info("No data available yet.")
 
 elif selected == cur["tutor"]:
     sub_choice = st.selectbox("Context:", cur["subjects"]) 
@@ -120,7 +116,6 @@ elif selected == cur["tutor"]:
 
 elif selected == cur["history"]:
     if not df.empty: st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
-    else: st.info("No records.")
 
 elif selected == cur["settings"]:
     lang_choice = st.radio("Language", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1)
