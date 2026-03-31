@@ -21,7 +21,7 @@ def extract_text_from_file(uploaded_file):
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
             payload = {
                 "contents": [{"parts": [
-                    {"text": "Extract all text from this image."},
+                    {"text": "Extract all text from this image accurately."},
                     {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}
                 ]}]
             }
@@ -34,19 +34,21 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
-    # שימוש ב-1.5-flash למכסה גבוהה
+    # שימוש בכתובת היציבה שעבדה לך
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
-    system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew."
+    headers = {'Content-Type': 'application/json'}
+    # הוראה לבוט לענות בשפה הנבחרת
+    system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew unless asked otherwise."
     if file_context:
-        system_prompt += f"\n\nContext:\n{file_context[:12000]}"
+        system_prompt += f"\n\nPRIORITY CONTEXT:\n{file_context[:12000]}"
 
     payload = {
-        "contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}]
+        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}]
     }
 
     try:
-        res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, stream=True)
+        res = requests.post(url, headers=headers, json=payload, stream=True)
         for line in res.iter_lines():
             if line:
                 decoded = line.decode('utf-8')
@@ -54,12 +56,14 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                     data_str = decoded[6:]
                     if data_str.strip() == "[DONE]": break
                     try:
-                        chunk = json.loads(data_str)
-                        # חילוץ חסין שגיאות:
-                        if 'candidates' in chunk and chunk['candidates']:
-                            part = chunk['candidates'][0].get('content', {}).get('parts', [{}])[0]
-                            text = part.get('text', '')
-                            if text: yield text
+                        chunk_json = json.loads(data_str)
+                        # חילוץ טקסט חסין שגיאות - סורק את כל המבנה
+                        if 'candidates' in chunk_json and chunk_json['candidates']:
+                            candidate = chunk_json['candidates'][0]
+                            if 'content' in candidate and 'parts' in candidate['content']:
+                                text_chunk = candidate['content']['parts'][0].get('text', '')
+                                if text_chunk:
+                                    yield text_chunk
                     except: continue
     except Exception as e:
         yield f"🚨 Connection Error: {e}"
