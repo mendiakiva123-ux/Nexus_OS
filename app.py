@@ -10,11 +10,12 @@ from ai_manager import get_ai_response_stream, extract_text_from_file
 st.set_page_config(page_title="Nexus OS", layout="wide", initial_sidebar_state="collapsed")
 init_db()
 
+# ברירת מחדל עברית
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- עיצוב Vivid (צבעוני ונוח) ---
+# --- עיצוב Vivid & Live (צבעוני וחדשני) ---
 st.markdown("""
     <style>
     [data-testid="stAppViewContainer"] {
@@ -23,27 +24,33 @@ st.markdown("""
     }
     [data-testid="collapsedControl"] { display: none !important; }
 
+    /* כרטיסי מדדים */
     div[data-testid="stMetric"] {
         background: rgba(255, 255, 255, 0.15) !important;
         border-radius: 20px; padding: 25px; backdrop-filter: blur(15px);
         border: 1px solid rgba(255, 255, 255, 0.3);
     }
-    div[data-testid="stMetricValue"] { color: #ffffff !important; font-weight: 900 !important; }
+    div[data-testid="stMetricValue"] { color: #ffffff !important; font-weight: 900 !important; font-size: 3rem !important; }
+    div[data-testid="stMetricLabel"] { color: #00d4ff !important; font-size: 1.2rem !important; font-weight: bold !important; }
 
+    /* כפתורי ניאון */
     .stButton>button {
         background: linear-gradient(45deg, #00f2fe 0%, #4facfe 100%) !important;
         color: #000 !important; border-radius: 15px; font-weight: 900; height: 50px; border: none;
     }
 
-    [data-testid="stChatMessage"] { background: rgba(0, 0, 0, 0.3) !important; border-radius: 15px; }
-    [data-testid="stChatMessageContent"] p { color: white !important; font-size: 1.1rem !important; }
+    /* בועות צ'אט */
+    [data-testid="stChatMessage"] { background: rgba(0, 0, 0, 0.3) !important; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); }
+    [data-testid="stChatMessageContent"] p { color: #ffffff !important; font-size: 1.1rem !important; }
 
+    /* קלט - קריא וברור */
     input, select, textarea, [data-baseweb="select"] {
         background: white !important; color: black !important; font-weight: bold !important; border-radius: 10px !important;
     }
     </style>
     """, unsafe_allow_html=True)
 
+# RTL (עברית)
 if st.session_state.lang == "עברית":
     st.markdown("<style>div[data-testid='stChatMessageContent'] * { direction: rtl; text-align: right; } textarea { direction: rtl; }</style>", unsafe_allow_html=True)
 
@@ -53,7 +60,10 @@ st.markdown(f"<h1 style='text-align:center; color:#ffffff; text-shadow: 0 0 20px
 # תפריט אופקי
 selected = option_menu(None, ["דאשבורד", "AI Tutor", "היסטוריה", "הגדרות"], 
     icons=["grid-fill", "cpu-fill", "clock-history", "gear-fill"], orientation="horizontal",
-    styles={"container": {"background-color": "rgba(255,255,255,0.1)"}, "nav-link-selected": {"background-color": "#4facfe", "color": "black"}})
+    styles={
+        "container": {"background-color": "rgba(255,255,255,0.1)", "border-radius": "15px"},
+        "nav-link-selected": {"background-color": "#4facfe", "color": "black"}
+    })
 
 df = get_all_grades()
 
@@ -62,7 +72,7 @@ if selected == "דאשבורד":
     val = df['grade'].mean() if not df.empty else 0.0
     c1.metric("ממוצע ציונים", f"{val:.1f}")
     c2.metric("משימות", len(df))
-    c3.metric("מערכת", "Online 🟢")
+    c3.metric("System", "Operational 🟢")
     
     st.divider()
     l, r = st.columns([1, 1.3])
@@ -72,7 +82,7 @@ if selected == "דאשבורד":
             s = st.selectbox("מקצוע", ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"])
             tp = st.text_input("נושא")
             g = st.number_input("ציון", 0, 100, 90)
-            if st.form_submit_button("שמור"):
+            if st.form_submit_button("שמור רשומה"):
                 save_grade(s, tp, g); st.rerun()
         
         st.markdown("### 📚 טעינת חומר")
@@ -83,6 +93,7 @@ if selected == "דאשבורד":
                 st.success("המידע נטען!")
 
     with r:
+        st.markdown("### 📈 ניתוח מגמות")
         if not df.empty:
             fig = px.line(df.sort_values('date'), x='date', y='grade', color='subject', markers=True)
             fig.update_layout(paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", font_color="white")
@@ -113,5 +124,5 @@ elif selected == "הגדרות":
     if lang != st.session_state.lang:
         st.session_state.lang = lang; st.rerun()
     st.divider()
-    if st.button("🗑️ נקה היסטוריית צ'אט"): st.session_state.chat_history = []; st.rerun()
+    if st.button("🗑️ נקה צ'אט"): st.session_state.chat_history = []; st.rerun()
     if st.button("🚨 איפוס נתונים"): clear_db(); st.rerun()
