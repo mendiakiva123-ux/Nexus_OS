@@ -28,12 +28,12 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context="", lang="עברית"):
     api_key = st.secrets["GOOGLE_API_KEY"].strip()
-    # נתיב ראשון - Beta
+    # שימוש בכתובת v1beta שהיא היציבה ביותר להזרמה
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
-    instruct = "ענה בעברית בלבד" if lang == "עברית" else "Respond in English only"
-    system_prompt = f"You are Nexus AI, an elite academic assistant. {instruct}. Subject: {subject}."
+    instruct = "Respond in Hebrew only" if lang == "עברית" else "Respond in English only"
+    system_prompt = f"You are Nexus AI, an academic expert. {instruct}. Subject: {subject}."
     if file_context: system_prompt += f"\n\nContext:\n{file_context[:10000]}"
 
     payload = {"contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}]}
@@ -41,13 +41,13 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית"):
     try:
         res = requests.post(url, headers=headers, json=payload, stream=True)
         
-        # פתרון ה-404: אם הכתובת לא נמצאה, עוברים לכתובת היציבה (v1)
+        # Fallback ל-v1 במקרה של 404
         if res.status_code == 404:
             url_v1 = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
             res = requests.post(url_v1, headers=headers, json=payload, stream=True)
 
         if res.status_code != 200:
-            yield f"🚨 שגיאה {res.status_code}: וודא שהמפתח ב-Secrets תקין וללא רווחים."
+            yield f"🚨 Error {res.status_code}: Check API Key."
             return
 
         for line in res.iter_lines():
@@ -58,14 +58,11 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית"):
                     if data_str.strip() == "[DONE]": break
                     try:
                         chunk = json.loads(data_str)
-                        # חילוץ אגרסיבי למניעת בועות ריקות
+                        # חילוץ חסין שגיאות - מוודא שיש טקסט לפני ה-yield
                         if 'candidates' in chunk and chunk['candidates']:
                             cand = chunk['candidates'][0]
-                            content = cand.get('content', {})
-                            parts = content.get('parts', [])
-                            if parts:
-                                txt = parts[0].get('text', '')
-                                if txt: yield txt
+                            if 'content' in cand and 'parts' in cand['content']:
+                                text_chunk = cand['content']['parts'][0].get('text', '')
+                                if text_chunk: yield text_chunk
                     except: continue
-    except Exception as e:
-        yield f"🚨 שגיאת חיבור: {e}"
+    except Exception as e: yield f"🚨 Connection Error: {e}"
