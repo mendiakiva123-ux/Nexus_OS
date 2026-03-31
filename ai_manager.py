@@ -6,7 +6,7 @@ import PyPDF2
 import docx
 import base64
 
-# --- פונקציית סריקת הקבצים (PDF, Word, תמונות) ---
+# --- פונקציית סריקה (PDF, Word, תמונות) ---
 def extract_text_from_file(uploaded_file):
     text = ""
     try:
@@ -14,74 +14,66 @@ def extract_text_from_file(uploaded_file):
             reader = PyPDF2.PdfReader(uploaded_file)
             for page in reader.pages:
                 text += page.extract_text() + "\n"
-                
         elif uploaded_file.name.endswith('.docx'):
             doc = docx.Document(uploaded_file)
             for para in doc.paragraphs:
                 text += para.text + "\n"
-                
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"]
-            # שימוש בכתובת v1 היציבה לפענוח תמונות (OCR)
             url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
-            
             image_bytes = uploaded_file.getvalue()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-            mime_type = uploaded_file.type
-            
             payload = {
-                "contents": [{
-                    "parts": [
-                        {"text": "Extract all text from this image accurately. Output only the text."},
-                        {"inlineData": {"mimeType": mime_type, "data": encoded_image}}
-                    ]
-                }]
+                "contents": [{"parts": [
+                    {"text": "Extract all text from this image accurately."},
+                    {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}
+                ]}]
             }
             res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0]['text']
-            else:
-                return f"🚨 שגיאה בפענוח תמונה: {res.text}"
-                
     except Exception as e:
-        return f"🚨 Error extracting text: {e}"
+        return f"🚨 שגיאה בסריקה: {e}"
     return text
 
-# --- מנוע הבוט המשולב (קבצים + אינטרנט + מהירות) ---
+# --- מנוע הבוט המשולב והחסין ---
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # שימוש ב-v1beta כי היא היחידה שתומכת ב-Google Search Grounding
-    stream_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    # ניסיון ראשון: v1beta (תומך באינטרנט)
+    url_beta = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    # ניסיון גיבוי: v1 (הכי יציב בעולם)
+    url_stable = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    
     headers = {'Content-Type': 'application/json'}
-    
-    system_prompt = f"""You are Nexus AI, an elite academic assistant. Current subject: {subject}.
-    CRITICAL INSTRUCTIONS:
-    1. Accuracy: Cross-check facts using Google Search. Never hallucinate.
-    2. Structure: Use headers, bullet points, and bold text for clarity.
-    3. Context: Prioritize the provided study material if available.
-    4. Language: Always respond in the language of the user's question (Hebrew/English).
-    """
-    
+    system_prompt = f"You are Nexus AI, an academic assistant. Subject: {subject}. Always use Hebrew if asked in Hebrew."
     if file_context:
-        system_prompt += f"\n\nUSER STUDY MATERIAL:\n{file_context[:10000]}"
-    
-    payload = {
-        "contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}],
-        "tools": [{"googleSearch": {}}] # מאפשר גישה לאינטרנט בזמן אמת
+        system_prompt += f"\nContext from files: {file_context[:5000]}"
+
+    # פיילוד מתקדם (כולל חיפוש בגוגל)
+    payload_beta = {
+        "contents": [{"parts": [{"text": f"{system_prompt}\nQuestion: {prompt}"}]}],
+        "tools": [{"googleSearch": {}}]
     }
     
+    # פיילוד פשוט (ליתר ביטחון)
+    payload_stable = {
+        "contents": [{"parts": [{"text": f"{system_prompt}\nQuestion: {prompt}"}]}]
+    }
+
     try:
-        # שליחת הבקשה עם stream=True כדי לקבל מילים תוך כדי תנועה
-        res = requests.post(stream_url, headers=headers, json=payload, stream=True)
+        # ניסיון עם הכתובת המתקדמת
+        res = requests.post(url_beta, headers=headers, json=payload_beta, stream=True, timeout=10)
         res.encoding = 'utf-8'
         
+        # אם הכתובת המתקדמת נכשלה (כמו שקרה לך), עוברים מיד ליציבה
         if res.status_code != 200:
-            # אם v1beta עושה בעיות, ננסה אוטומטית גרסה יציבה (בלי אינטרנט אבל עם תשובה)
-            stable_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
-            payload_no_tools = {"contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}]}
-            res = requests.post(stable_url, headers=headers, json=payload_no_tools, stream=True)
+            res = requests.post(url_stable, headers=headers, json=payload_stable, stream=True, timeout=10)
             res.encoding = 'utf-8'
+
+        if res.status_code != 200:
+            yield f"🚨 שגיאת שרת גוגל: {res.status_code}. בדוק את מפתח ה-API שלך ב-Secrets."
+            return
 
         for line in res.iter_lines():
             if line:
@@ -93,10 +85,12 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                     try:
                         chunk_json = json.loads(data_str)
                         if 'candidates' in chunk_json:
-                            part = chunk_json['candidates'][0]['content']['parts'][0]
-                            if 'text' in part:
-                                yield part['text']
+                            # חילוץ הטקסט המדויק מהמבנה של גוגל
+                            content = chunk_json['candidates'][0].get('content', {})
+                            parts = content.get('parts', [])
+                            if parts and 'text' in parts[0]:
+                                yield parts[0]['text']
                     except:
                         continue
     except Exception as e:
-        yield f"🚨 שגיאת מערכת: {e}"
+        yield f"🚨 שגיאת חיבור: {str(e)}"
