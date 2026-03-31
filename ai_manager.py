@@ -1,11 +1,30 @@
 import streamlit as st
 import requests
 import json
+import time
+import PyPDF2
+import docx
 
-def get_ai_response_stream(subject, prompt):
+# פונקציה חדשה: קריאת קבצים (PDF/Word) והפיכתם לטקסט חי
+def extract_text_from_file(uploaded_file):
+    text = ""
+    try:
+        if uploaded_file.name.endswith('.pdf'):
+            reader = PyPDF2.PdfReader(uploaded_file)
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
+        elif uploaded_file.name.endswith('.docx'):
+            doc = docx.Document(uploaded_file)
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+    except Exception as e:
+        return f"Error extracting text: {e}"
+    return text
+
+# הבוט עודכן לקבל "file_context" (הטקסט מהקבצים שלך)
+def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # שלב 1: מציאת המודל
     list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     try:
         list_res = requests.get(list_url)
@@ -20,7 +39,6 @@ def get_ai_response_stream(subject, prompt):
                 valid_model = m["name"]
                 if "flash" in valid_model:
                     break
-                    
         if not valid_model:
             yield "🚨 לא נמצא מודל נתמך."
             return
@@ -28,28 +46,29 @@ def get_ai_response_stream(subject, prompt):
         yield f"🚨 שגיאה מול גוגל: {e}"
         return
 
-    # שלב 2: הזרמת נתונים אמיתית (True Streaming)
     stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
-    
     headers = {'Content-Type': 'application/json'}
-    context = f"You are a brilliant academic assistant in Nexus OS. Current subject: {subject}."
+    
+    # בניית ההנחיה החכמה (Prompt Engineering)
+    system_prompt = f"You are a brilliant academic assistant in Nexus OS. Current subject: {subject}."
+    
+    # אם העלית קובץ - הבוט יקבל פקודה קפדנית להשתמש בו!
+    if file_context:
+        system_prompt += f"\n\nHere is the user's study material for this subject. Prioritize this information in your answers:\n<study_material>\n{file_context[:10000]}\n</study_material>"
     
     payload = {
-        "contents": [{"parts": [{"text": f"{context}\n\nUser Question: {prompt}"}]}],
-        "tools": [{"googleSearch": {}}] # הגישה לאינטרנט
+        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}],
+        "tools": [{"googleSearch": {}}] # חיבור מלא לאינטרנט בזמן אמת!
     }
     
     try:
         res = requests.post(stream_url, headers=headers, json=payload, stream=True)
-        
-        # 💡 הפתרון לג'יבריש: הכרחת המערכת לקרוא את ההזרמה בקידוד התומך בעברית!
-        res.encoding = 'utf-8'
+        res.encoding = 'utf-8' # תיקון הג'יבריש!
         
         if res.status_code != 200:
             yield f"🚨 שגיאה בשרת גוגל: {res.status_code} - {res.text}"
             return
             
-        # קריאת ההזרמה שורה אחר שורה ופענוח ה-JSON
         for line in res.iter_lines():
             if line:
                 decoded_line = line.decode('utf-8')
@@ -67,9 +86,5 @@ def get_ai_response_stream(subject, prompt):
                                 yield text_chunk
                     except json.JSONDecodeError:
                         continue
-                        
     except Exception as e:
         yield f"🚨 שגיאת רשת הזרמה: {e}"
-
-def process_file_to_db(file_path, subject):
-    pass
