@@ -19,7 +19,7 @@ def extract_text_from_file(uploaded_file):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             image_bytes = uploaded_file.getvalue()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-            payload = {"contents": [{"parts": [{"text": "Extract text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}]}]}
+            payload = {"contents": [{"parts": [{"text": "Extract all text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}]}]}
             res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0]['text']
@@ -29,22 +29,20 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
-    # שימוש ישיר במודל פלאש למניעת בקשות מיותרות לשרת
+    
+    # כתובת ישירה וסופית ללא חיפושים מיותרים - מונע 404
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
     payload = {
-        "contents": [{"parts": [{"text": f"Subject: {subject}. Respond in Hebrew. Context: {file_context[:5000]}. Question: {prompt}"}]}]
+        "contents": [{"parts": [{"text": f"Subject: {subject}. Respond in Hebrew. Context: {file_context[:8000]}. Question: {prompt}"}]}]
     }
 
     try:
         response = requests.post(url, headers=headers, json=payload, stream=True)
         
-        if response.status_code == 429:
-            yield "🚨 עומס על השרת (429). גוגל מגבילה את כמות השאלות בדקה. המתן 30 שניות ונסה שוב."
-            return
-        elif response.status_code != 200:
-            yield f"🚨 שגיאת שרת: {response.status_code}. בדוק את המפתח ב-Secrets."
+        if response.status_code != 200:
+            yield f"🚨 שגיאת שרת גוגל: {response.status_code}. (בדוק שהמפתח ב-Secrets תקין ושאין רווחים)."
             return
 
         for line in response.iter_lines():
@@ -55,8 +53,9 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                     if data_str.strip() == "[DONE]": break
                     try:
                         chunk = json.loads(data_str)
-                        text = chunk['candidates'][0]['content']['parts'][0].get('text', '')
-                        if text: yield text
+                        if 'candidates' in chunk:
+                            text = chunk['candidates'][0]['content']['parts'][0].get('text', '')
+                            if text: yield text
                     except: continue
     except Exception as e:
-        yield f"🚨 תקלה: {str(e)}"
+        yield f"🚨 תקלה טכנית: {str(e)}"
