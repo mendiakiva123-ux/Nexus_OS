@@ -6,7 +6,7 @@ import plotly.express as px
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
-# --- 1. אתחול מערכת ---
+# --- הגדרות ליבה ---
 st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="collapsed")
 init_db()
 
@@ -14,68 +14,62 @@ if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-SUBJECTS = ["General / כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "מדעי המחשב", "אחר"]
-
-# --- 2. עיצוב וסטייל ---
+# עיצוב Glassmorphism
 st.markdown("""
     <style>
     [data-testid="collapsedControl"] { display: none !important; }
     [data-testid="stAppViewContainer"] { background: radial-gradient(circle at top, #0f2027, #203a43, #2c5364) !important; color: white; }
     div[data-testid="stMetric"] { background: rgba(255, 255, 255, 0.05); border: 1px solid #00D1FF; border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }
-    div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3.5rem !important; }
-    .stButton>button { background: linear-gradient(90deg, #00D1FF, #007BFF); color: white; border-radius: 25px; border:none; font-weight:bold; width: 100%; }
-    input, select, textarea { background: white !important; color: black !important; border-radius: 10px !important; font-weight: bold; }
+    div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3rem !important; }
+    .stButton>button { background: linear-gradient(90deg, #00D1FF, #007BFF); color: white; border-radius: 25px; border:none; font-weight:bold; }
+    input, select, textarea { background: white !important; color: black !important; border-radius: 10px !important; }
     </style>
     """, unsafe_allow_html=True)
 
 if st.session_state.lang == "עברית":
     st.markdown("<style>[data-testid='stChatMessageContent'] * { direction: rtl; text-align: right; } [data-testid='stChatInput'] textarea { direction: rtl; text-align: right; }</style>", unsafe_allow_html=True)
 
-# כותרת וברכה
+# ברכה
 h = datetime.datetime.now().hour
 greet = "בוקר טוב" if 5<=h<12 else "צהריים טובים" if 12<=h<17 else "ערב טוב" if 17<=h<21 else "לילה טוב"
 st.markdown(f"<h1 style='text-align:center; color:#00D1FF; margin:0;'>NEXUS OS</h1><p style='text-align:center;'>{greet}, Mendi 🎓</p>", unsafe_allow_html=True)
 
-# תפריט ניווט
+# תפריט
 sel = option_menu(None, ["Dashboard", "AI Tutor", "History", "Settings"], 
     icons=["grid-fill", "cpu-fill", "clock-history", "gear-fill"], orientation="horizontal",
-    styles={"container": {"background-color": "rgba(0,0,0,0.3)"}, "nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.2)", "color": "#00D1FF"}})
+    styles={"nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.2)", "color": "#00D1FF"}})
 
 df = get_all_grades()
 
-# --- 3. דפי המערכת ---
-
 if sel == "Dashboard":
     c1, c2, c3 = st.columns(3)
-    c1.metric("ממוצע אקדמי", f"{df['grade'].mean():.1f}" if not df.empty else "0.0")
+    avg = df['grade'].mean() if not df.empty else 0.0
+    c1.metric("ממוצע אקדמי", f"{avg:.1f}")
     c2.metric("משימות", len(df))
-    c3.metric("System Engine", "1.5 Flash 🟢")
+    c3.metric("Status", "Active 🟢")
     
     l, r = st.columns([1, 1.2])
     with l:
-        st.markdown("### 📝 הזנת נתונים")
-        with st.form("grade_form", clear_on_submit=True):
-            sub = st.selectbox("מקצוע", SUBJECTS[1:])
-            top = st.text_input("נושא / מטלה")
+        with st.form("grade_f", clear_on_submit=True):
+            sub = st.selectbox("מקצוע", ["מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"])
+            top = st.text_input("נושא")
             grd = st.number_input("ציון", 0, 100, 90)
-            if st.form_submit_button("שמור"):
+            if st.form_submit_button("שמור ציון"):
                 save_grade(sub, top, grd); st.rerun()
         
-        st.markdown("### 📁 חומרי לימוד")
-        u_file = st.file_uploader("PDF / Docx / Image", type=["pdf", "docx", "png", "jpg", "jpeg"])
-        if u_file and st.button("🧠 טען ל-AI"):
-            with st.spinner("Learning..."):
-                st.session_state.file_contexts[sub] = extract_text_from_file(u_file)
-                st.success("החומר נלמד!")
+        up = st.file_uploader("סריקת חומר לימודי", type=["pdf", "docx", "png", "jpg"])
+        if up and st.button("🧠 טען ל-AI"):
+            st.session_state.file_contexts[sub] = extract_text_from_file(up)
+            st.success("החומר נלמד!")
+
     with r:
-        st.markdown("### 📈 ניתוח מגמות")
         if not df.empty:
             fig = px.line(df.sort_values('date'), x='date', y='grade', color='subject', markers=True)
             fig.update_layout(plot_bgcolor="rgba(0,0,0,0)", paper_bgcolor="rgba(0,0,0,0)", font_color="white")
             st.plotly_chart(fig, use_container_width=True)
 
 elif sel == "AI Tutor":
-    sub_sel = st.selectbox("הקשר לימודי", SUBJECTS)
+    sub_sel = st.selectbox("הקשר לימודי", ["General", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"])
     chat = st.container(height=450)
     for m in st.session_state.chat_history:
         with chat.chat_message(m["role"]): st.markdown(m["content"])
@@ -92,5 +86,5 @@ elif sel == "History":
     if not df.empty: st.dataframe(df.sort_values('date', ascending=False), use_container_width=True)
 
 elif sel == "Settings":
-    if st.button("🗑️ נקה צ'אט"): st.session_state.chat_history = []; st.rerun()
-    if st.button("🚨 מחק הכל"): clear_db(); st.rerun()
+    if st.button("נקה צ'אט"): st.session_state.chat_history = []; st.rerun()
+    if st.button("איפוס נתונים"): clear_db(); st.rerun()
