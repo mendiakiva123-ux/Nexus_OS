@@ -34,7 +34,7 @@ def extract_text_from_file(uploaded_file):
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0]['text']
             else:
-                return f"🚨 שגיאה בפענוח התמונה: {res.text}"
+                return f"🚨 שגיאה בתמונה: {res.text}"
     except Exception as e:
         return f"🚨 Error: {e}"
     return text
@@ -51,19 +51,21 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                 valid_model = m["name"]
                 if "flash" in valid_model: break
         if not valid_model:
-            yield "🚨 לא נמצא מודל נתמך."
+            yield "🚨 לא נמצא מודל."
             return
-    except Exception as e:
-        yield f"🚨 שגיאה מול גוגל: {e}"
+    except:
+        yield "🚨 שגיאת חיבור."
         return
 
     stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
-    system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew."
+    system_prompt = f"""You are Nexus AI, an elite academic assistant. Subject: {subject}. 
+    Respond in Hebrew. Base your answers on the provided context if available."""
+    
     if file_context:
-        system_prompt += f"\n\nContext:\n{file_context[:15000]}"
+        system_prompt += f"\n\nCONTEXT:\n{file_context[:15000]}"
 
     payload = {
-        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}],
+        "contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}],
         "tools": [{"googleSearch": {}}]
     }
 
