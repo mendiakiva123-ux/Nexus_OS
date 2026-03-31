@@ -20,6 +20,7 @@ def extract_text_from_file(uploaded_file):
                 text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"]
+            # שימוש בכתובת היציבה ביותר לפענוח תמונות
             url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
             image_bytes = uploaded_file.getvalue()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
@@ -36,50 +37,58 @@ def extract_text_from_file(uploaded_file):
         return f"🚨 שגיאה בסריקה: {e}"
     return text
 
-# --- מנוע הבוט היציב והמהיר ---
+# --- מנוע הבוט המשולב והחסין משגיאות 404 ---
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # משתמשים בכתובת היציבה ביותר (v1beta) שתומכת בסטרימינג ואינטרנט
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
-    headers = {'Content-Type': 'application/json'}
+    # הגדרת שתי כתובות: אחת מתקדמת (עם חיפוש) ואחת יציבה (בלי חיפוש)
+    url_beta = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    url_stable = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
-    # הנחיית מערכת קשוחה לדיוק ומקצועיות
+    headers = {'Content-Type': 'application/json'}
     system_instruction = (
         f"You are Nexus AI, a professional academic assistant. Subject: {subject}. "
         "Use clear structure, headers, and bullet points. Always respond in Hebrew. "
-        "If information is missing, use Google Search via your tools."
     )
     
-    full_prompt = f"{system_instruction}\n\n"
-    if file_context:
-        full_prompt += f"CONTEXT FROM USER FILES:\n{file_context[:8000]}\n\n"
-    full_prompt += f"USER QUESTION: {prompt}"
+    context_text = f"CONTEXT FROM USER FILES:\n{file_context[:8000]}\n\n" if file_context else ""
+    full_text = f"{system_instruction}\n\n{context_text}USER QUESTION: {prompt}"
 
-    payload = {
-        "contents": [{"role": "user", "parts": [{"text": full_prompt}]}],
+    # פיילוד מתקדם (עם חיפוש)
+    payload_with_search = {
+        "contents": [{"role": "user", "parts": [{"text": full_text}]}],
         "tools": [{"googleSearch": {}}]
+    }
+    
+    # פיילוד בסיסי (למקרה חירום)
+    payload_basic = {
+        "contents": [{"role": "user", "parts": [{"text": full_text}]}]
     }
 
     try:
-        # שליחת הבקשה
-        response = requests.post(url, headers=headers, json=payload, stream=True)
+        # ניסיון 1: עם חיפוש בגוגל
+        response = requests.post(url_beta, headers=headers, json=payload_with_search, stream=True)
         
-        # אם יש שגיאה מהשרת של גוגל
+        # אם קיבלנו 404 או כל שגיאה אחרת - עוברים מיד לגרסה היציבה
         if response.status_code != 200:
-            error_details = response.json() if response.text else "No details"
-            yield f"🚨 שגיאת API ({response.status_code}): {error_details}"
+            response = requests.post(url_stable, headers=headers, json=payload_basic, stream=True)
+
+        if response.status_code != 200:
+            yield f"🚨 שגיאת שרת גוגל ({response.status_code}). וודא שמפתח ה-API תקין ב-Secrets."
             return
 
-        # עיבוד הסטרימינג (SSE)
+        # עיבוד הסטרימינג
         for line in response.iter_lines():
             if line:
                 line_text = line.decode('utf-8')
                 if line_text.startswith("data: "):
-                    data_json = json.loads(line_text[6:])
-                    if "candidates" in data_json:
-                        chunk = data_json["candidates"][0]["content"]["parts"][0].get("text", "")
-                        yield chunk
+                    try:
+                        data_json = json.loads(line_text[6:])
+                        if "candidates" in data_json:
+                            chunk = data_json["candidates"][0]["content"]["parts"][0].get("text", "")
+                            yield chunk
+                    except:
+                        continue
                         
     except Exception as e:
-        yield f"🚨 תקלה בחיבור: {str(e)}"
+        yield f"🚨 תקלה טכנית: {str(e)}"
