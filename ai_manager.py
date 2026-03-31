@@ -10,25 +10,17 @@ def extract_text_from_file(uploaded_file):
     try:
         if uploaded_file.name.endswith('.pdf'):
             reader = PyPDF2.PdfReader(uploaded_file)
-            for page in reader.pages:
-                text += page.extract_text() + "\n"
+            for page in reader.pages: text += page.extract_text() + "\n"
         elif uploaded_file.name.endswith('.docx'):
             doc = docx.Document(uploaded_file)
-            for para in doc.paragraphs:
-                text += para.text + "\n"
+            for para in doc.paragraphs: text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"]
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             image_bytes = uploaded_file.getvalue()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-            mime_type = uploaded_file.type
             payload = {
-                "contents": [{
-                    "parts": [
-                        {"text": "Extract all text accurately."},
-                        {"inlineData": {"mimeType": mime_type, "data": encoded_image}}
-                    ]
-                }]
+                "contents": [{"parts": [{"text": "Extract all text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}]}]
             }
             res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
             if res.status_code == 200:
@@ -39,22 +31,13 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
-    # מציאת המודל שעובד אצלך
-    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-    try:
-        list_res = requests.get(list_url)
-        valid_model = "models/gemini-1.5-flash" # דיפולט בטוח
-        if list_res.status_code == 200:
-            for m in list_res.json().get("models", []):
-                if "generateContent" in m.get("supportedGenerationMethods", []):
-                    valid_model = m["name"]
-                    if "flash" in valid_model: break
-    except: pass
-
-    stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
-    system_prompt = f"You are Nexus AI, a professional academic assistant. Subject: {subject}. Respond in Hebrew."
+    # מציאת המודל בצורה בטוחה
+    model = "models/gemini-1.5-flash"
+    stream_url = f"https://generativelanguage.googleapis.com/v1beta/{model}:streamGenerateContent?alt=sse&key={api_key}"
+    
+    system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew. Be concise and professional."
     if file_context:
-        system_prompt += f"\n\nContext:\n{file_context[:10000]}"
+        system_prompt += f"\n\nContext from files:\n{file_context[:10000]}"
 
     payload = {
         "contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}]
@@ -62,6 +45,10 @@ def get_ai_response_stream(subject, prompt, file_context=""):
 
     try:
         res = requests.post(stream_url, headers={'Content-Type': 'application/json'}, json=payload, stream=True)
+        if res.status_code != 200:
+            yield f"🚨 שגיאת שרת גוגל: {res.status_code}"
+            return
+
         for line in res.iter_lines():
             if line:
                 decoded = line.decode('utf-8')
@@ -70,7 +57,10 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                     if data_str.strip() == "[DONE]": break
                     try:
                         chunk_json = json.loads(data_str)
-                        yield chunk_json['candidates'][0]['content']['parts'][0].get('text', '')
+                        # חילוץ טקסט בטוח יותר
+                        if 'candidates' in chunk_json:
+                            t_chunk = chunk_json['candidates'][0]['content']['parts'][0].get('text', '')
+                            if t_chunk: yield t_chunk
                     except: continue
     except Exception as e:
-        yield f"🚨 Connection Error: {e}"
+        yield f"🚨 שגיאת תקשורת: {e}"
