@@ -3,9 +3,8 @@ import google.generativeai as genai
 import PyPDF2
 import docx
 from PIL import Image
-import io
 
-# --- פונקציה לסריקת קבצים ותמונות ---
+# פונקציית סריקה
 def extract_text_from_file(uploaded_file):
     text = ""
     try:
@@ -18,8 +17,7 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs:
                 text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
-            api_key = st.secrets["GOOGLE_API_KEY"]
-            genai.configure(api_key=api_key)
+            genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
             model = genai.GenerativeModel('gemini-1.5-flash')
             img = Image.open(uploaded_file)
             response = model.generate_content(["Extract all text from this image.", img])
@@ -28,26 +26,19 @@ def extract_text_from_file(uploaded_file):
         return f"🚨 שגיאה בסריקה: {e}"
     return text
 
-# --- מנוע הבוט הרשמי והסופי ---
+# מנוע הבוט - גרסת הברזל
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-        genai.configure(api_key=api_key)
-        
-        # שימוש בשם המודל הכי סטנדרטי שיש
+        # הגדרה מחדש בכל קריאה כדי לוודא שהמפתח תמיד שם
+        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        system_instruction = (
-            f"You are Nexus AI, an elite academic assistant. Subject: {subject}. "
-            "Respond in Hebrew. Use headers and bullet points for clarity."
-        )
-        
-        full_prompt = f"{system_instruction}\n\n"
+        full_prompt = f"Subject: {subject}. Respond in Hebrew. Use structure. "
         if file_context:
-            full_prompt += f"CONTEXT FROM FILES:\n{file_context[:10000]}\n\n"
-        full_prompt += f"USER QUESTION: {prompt}"
+            full_prompt += f"Context: {file_context[:5000]} "
+        full_prompt += f"Question: {prompt}"
 
-        # הזרמת תשובה (Streaming)
+        # הזרמה ישירה
         response = model.generate_content(full_prompt, stream=True)
         
         for chunk in response:
@@ -55,10 +46,4 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                 yield chunk.text
 
     except Exception as e:
-        error_msg = str(e)
-        if "429" in error_msg:
-            yield "🚨 חריגה ממכסת הודעות. המתן דקה ונסה שוב."
-        elif "404" in error_msg:
-            yield "🚨 שגיאת מודל (404). וודא שביצעת Reboot לאפליקציה ב-Streamlit Cloud."
-        else:
-            yield f"🚨 שגיאת תקשורת: {error_msg}"
+        yield f"🚨 שגיאה ישירה מגוגל: {str(e)}"
