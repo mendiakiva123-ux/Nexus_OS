@@ -2,8 +2,6 @@ streamlit
 streamlit-option-menu
 pandas
 plotly
-supabase
-st-supabase-connection
 requests
 PyPDF2
 python-docx
