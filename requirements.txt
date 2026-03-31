@@ -7,3 +7,4 @@ st-supabase-connection
 requests
 PyPDF2
 python-docx
+Pillow
