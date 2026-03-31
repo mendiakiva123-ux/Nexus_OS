@@ -3,6 +3,7 @@ import google.generativeai as genai
 import PyPDF2
 import docx
 from PIL import Image
+import io
 
 def init_genai():
     api_key = st.secrets["GOOGLE_API_KEY"]
@@ -13,15 +14,19 @@ def extract_text_from_file(uploaded_file):
     try:
         if uploaded_file.name.endswith('.pdf'):
             reader = PyPDF2.PdfReader(uploaded_file)
-            for page in reader.pages: text += page.extract_text() + "\n"
+            for page in reader.pages:
+                text += page.extract_text() + "\n"
         elif uploaded_file.name.endswith('.docx'):
             doc = docx.Document(uploaded_file)
-            for para in doc.paragraphs: text += para.text + "\n"
+            for para in doc.paragraphs:
+                text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             init_genai()
-            model = genai.GenerativeModel('gemini-2.0-flash')
+            # שימוש במודל 1.5 היציב ביותר לסריקה
+            model = genai.GenerativeModel('gemini-1.5-flash')
             img = Image.open(uploaded_file)
-            text = model.generate_content(["Extract all text accurately.", img]).text
+            response = model.generate_content(["Extract all text from this image accurately.", img])
+            text = response.text
     except Exception as e:
         return f"🚨 שגיאה בסריקה: {e}"
     return text
@@ -29,16 +34,29 @@ def extract_text_from_file(uploaded_file):
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
         init_genai()
-        # שימוש במודל 2.0 פלאש שקיים ברשימה שלך
-        model = genai.GenerativeModel('gemini-2.0-flash')
+        # שימוש במודל 1.5 פלאש - המכסה הגבוהה ביותר (1,500 ביום)
+        model = genai.GenerativeModel('gemini-1.5-flash')
         
-        system_msg = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew."
-        full_p = f"{system_msg}\n\n"
-        if file_context: full_p += f"Context from files:\n{file_context[:8000]}\n\n"
-        full_p += f"User Question: {prompt}"
+        system_instruction = (
+            f"You are Nexus AI, a professional academic assistant. Subject: {subject}. "
+            "Respond in Hebrew. Use clear structure with headers and bullet points."
+        )
+        
+        full_prompt = f"{system_instruction}\n\n"
+        if file_context:
+            full_prompt += f"CONTEXT FROM USER FILES:\n{file_context[:10000]}\n\n"
+        full_prompt += f"USER QUESTION: {prompt}"
 
-        response = model.generate_content(full_p, stream=True)
+        # הזרמת תשובה (Streaming)
+        response = model.generate_content(full_prompt, stream=True)
+        
         for chunk in response:
-            if chunk.text: yield chunk.text
+            if chunk.text:
+                yield chunk.text
+
     except Exception as e:
-        yield f"🚨 שגיאת API: {str(e)}"
+        error_msg = str(e)
+        if "429" in error_msg:
+            yield "🚨 חריגה ממכסת הודעות (Quota). המתן דקה ונסה שוב."
+        else:
+            yield f"🚨 שגיאת תקשורת: {error_msg}"
