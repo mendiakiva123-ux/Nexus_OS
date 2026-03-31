@@ -31,36 +31,44 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
-    # מציאת המודל בצורה בטוחה
-    model = "models/gemini-1.5-flash"
-    stream_url = f"https://generativelanguage.googleapis.com/v1beta/{model}:streamGenerateContent?alt=sse&key={api_key}"
     
-    system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew. Be concise and professional."
-    if file_context:
-        system_prompt += f"\n\nContext from files:\n{file_context[:10000]}"
+    # 1. מציאת המודל בצורה חסינה
+    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    model_name = "models/gemini-1.5-flash" # ברירת מחדל
+    try:
+        r = requests.get(list_url)
+        if r.status_code == 200:
+            for m in r.json().get("models", []):
+                if "generateContent" in m.get("supportedGenerationMethods", []):
+                    model_name = m["name"]
+                    if "flash" in model_name: break
+    except: pass
 
+    # 2. ניקוי השם למניעת 404 (לוודא שאין כפילות של models/)
+    clean_model = model_name.replace("models/", "")
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:streamGenerateContent?alt=sse&key={api_key}"
+    
+    headers = {'Content-Type': 'application/json'}
     payload = {
-        "contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}]
+        "contents": [{"parts": [{"text": f"Subject: {subject}. Respond in Hebrew. Context: {file_context[:5000]}. Question: {prompt}"}]}]
     }
 
     try:
-        res = requests.post(stream_url, headers={'Content-Type': 'application/json'}, json=payload, stream=True)
-        if res.status_code != 200:
-            yield f"🚨 שגיאת שרת גוגל: {res.status_code}"
+        response = requests.post(url, headers=headers, json=payload, stream=True)
+        if response.status_code != 200:
+            yield f"🚨 שגיאת שרת גוגל: {response.status_code}. וודא שהמפתח תקין."
             return
 
-        for line in res.iter_lines():
+        for line in response.iter_lines():
             if line:
                 decoded = line.decode('utf-8')
                 if decoded.startswith("data: "):
                     data_str = decoded[6:]
                     if data_str.strip() == "[DONE]": break
                     try:
-                        chunk_json = json.loads(data_str)
-                        # חילוץ טקסט בטוח יותר
-                        if 'candidates' in chunk_json:
-                            t_chunk = chunk_json['candidates'][0]['content']['parts'][0].get('text', '')
-                            if t_chunk: yield t_chunk
+                        chunk = json.loads(data_str)
+                        text = chunk['candidates'][0]['content']['parts'][0].get('text', '')
+                        if text: yield text
                     except: continue
     except Exception as e:
-        yield f"🚨 שגיאת תקשורת: {e}"
+        yield f"🚨 תקלה: {str(e)}"
