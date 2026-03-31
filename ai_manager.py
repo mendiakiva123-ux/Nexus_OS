@@ -4,7 +4,7 @@ import PyPDF2
 import docx
 from PIL import Image
 
-# פונקציית סריקה
+# פונקציה לסריקת קבצים ותמונות
 def extract_text_from_file(uploaded_file):
     text = ""
     try:
@@ -26,19 +26,23 @@ def extract_text_from_file(uploaded_file):
         return f"🚨 שגיאה בסריקה: {e}"
     return text
 
-# מנוע הבוט - גרסת הברזל
+# מנוע הבוט הרשמי
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
-        # הגדרה מחדש בכל קריאה כדי לוודא שהמפתח תמיד שם
-        genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+        # הגדרה ישירה מה-Secrets
+        api_key = st.secrets["GOOGLE_API_KEY"]
+        genai.configure(api_key=api_key)
+        
+        # שימוש בשם המודל הרשמי והיציב
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        full_prompt = f"Subject: {subject}. Respond in Hebrew. Use structure. "
+        system_msg = f"You are Nexus AI, a helpful academic assistant. Subject: {subject}. Respond in Hebrew."
+        full_prompt = f"{system_msg}\n\n"
         if file_context:
-            full_prompt += f"Context: {file_context[:5000]} "
+            full_prompt += f"Context from files: {file_context[:5000]}\n\n"
         full_prompt += f"Question: {prompt}"
 
-        # הזרמה ישירה
+        # הזרמה
         response = model.generate_content(full_prompt, stream=True)
         
         for chunk in response:
@@ -46,4 +50,4 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                 yield chunk.text
 
     except Exception as e:
-        yield f"🚨 שגיאה ישירה מגוגל: {str(e)}"
+        yield f"🚨 שגיאת API ישירה: {str(e)}"
