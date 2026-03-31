@@ -6,8 +6,19 @@ from PIL import Image
 
 def init_genai():
     api_key = st.secrets["GOOGLE_API_KEY"].strip()
-    # הגדרה חסינה: מכריחים עבודה עם v1 היציבה
     genai.configure(api_key=api_key)
+
+def get_working_model():
+    """מוצא את השם המדויק שה-API של המשתמש דורש כרגע"""
+    init_genai()
+    try:
+        for m in genai.list_models():
+            if 'generateContent' in m.supported_generation_methods:
+                if 'gemini-1.5-flash' in m.name:
+                    return m.name
+        return 'gemini-1.5-flash' # Fallback
+    except:
+        return 'gemini-1.5-flash'
 
 def extract_text_from_file(uploaded_file):
     text = ""
@@ -20,7 +31,7 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs: text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             init_genai()
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            model = genai.GenerativeModel(get_working_model())
             img = Image.open(uploaded_file)
             response = model.generate_content(["Extract all text accurately.", img])
             text = response.text
@@ -31,20 +42,16 @@ def extract_text_from_file(uploaded_file):
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
         init_genai()
-        # שימוש במודל ללא הקידומת models/ - הספרייה מוסיפה אותה לבד
-        model = genai.GenerativeModel(model_name='gemini-1.5-flash')
+        # מזהה את שם המודל המדויק שגוגל רוצה לקבל
+        model_name = get_working_model()
+        model = genai.GenerativeModel(model_name)
         
-        system_instruction = f"You are Nexus AI, an academic assistant. Subject: {subject}. Respond in Hebrew."
+        system_instruction = f"You are Nexus AI, a top-tier academic assistant. Subject: {subject}. Respond in Hebrew."
         full_prompt = f"{system_instruction}\n\nContext: {file_context[:8000]}\n\nQuestion: {prompt}"
 
-        # הזרמה ישירה
         response = model.generate_content(full_prompt, stream=True)
         for chunk in response:
             if chunk.text:
                 yield chunk.text
     except Exception as e:
-        error_msg = str(e)
-        if "404" in error_msg:
-            yield "🚨 שגיאת מודל (404). המערכת מנסה להתחבר מחדש... וודא שהמפתח ב-Secrets נקי מרווחים."
-        else:
-            yield f"🚨 תקלה: {error_msg}"
+        yield f"🚨 שגיאת מערכת: {str(e)}. נסה לרפרש או לבדוק את המפתח ב-Secrets."
