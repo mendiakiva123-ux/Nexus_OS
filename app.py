@@ -6,7 +6,7 @@ import plotly.express as px
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
-# --- הגדרות ליבה ---
+# --- Core Setup ---
 st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
@@ -14,21 +14,24 @@ if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- מילון תרגום מלא ---
+# --- Translation Dictionary ---
+SUBJECTS_HE = ["כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
+SUBJECTS_EN = ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Computer Science", "Other"]
+
 t = {
     "עברית": {
         "dash": "מרכז שליטה", "tutor": "Nexus AI", "hist": "ארכיון", "set": "מערכת",
         "avg": "ממוצע אקדמי", "total": "סה\"כ רשומות", "status": "מצב ליבה", "opt": "אופטימלי",
         "add_title": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "sync": "סנכרן נתונים",
-        "up_title": "🧠 סריקת חומר", "ingest": "טען למוח ה-AI", "ask": "הזן שאילתה למערכת...",
-        "purge_chat": "🗑️ נקה צ'אט", "purge_db": "🚨 איפוס מסד נתונים", "subjects": ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"]
+        "up_title": "🧠 סריקת חומר", "ingest": "טען למוח ה-AI", "ask": "שאל את Nexus...",
+        "purge_chat": "🗑️ נקה צ'אט", "purge_db": "🚨 איפוס מסד נתונים", "subjects": SUBJECTS_HE
     },
     "English": {
         "dash": "Command Center", "tutor": "Nexus AI", "hist": "Archive", "set": "System",
         "avg": "Academic Avg", "total": "Total Records", "status": "Core Status", "opt": "Optimal",
         "add_title": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "sync": "Sync Data",
-        "up_title": "🧠 Neural Scanning", "ingest": "Ingest to AI", "ask": "Input query...",
-        "purge_chat": "🗑️ Purge Chat", "purge_db": "🚨 Reset DB", "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
+        "up_title": "🧠 Neural Scanning", "ingest": "Ingest to AI", "ask": "Ask Nexus...",
+        "purge_chat": "🗑️ Purge Chat", "purge_db": "🚨 Reset DB", "subjects": SUBJECTS_EN
     }
 }
 cur = t[st.session_state.lang]
@@ -67,7 +70,7 @@ with st.sidebar:
 
 df = get_all_grades()
 
-# --- מרכז שליטה ---
+# --- Command Center ---
 if selected == cur["dash"]:
     st.markdown(f"<h1>{cur['dash']}</h1>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
@@ -115,12 +118,12 @@ elif selected == cur["tutor"]:
             full_res = st.write_stream(get_ai_response_stream(sub_choice, p, ctx))
         st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
-# --- ארכיון ---
+# --- Archive ---
 elif selected == cur["hist"]:
     st.markdown(f"<h1>{cur['hist']}</h1>", unsafe_allow_html=True)
     st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
 
-# --- מערכת ---
+# --- System ---
 elif selected == cur["set"]:
     st.markdown(f"<h1>{cur['set']}</h1>", unsafe_allow_html=True)
     if st.button(cur["purge_db"]):
