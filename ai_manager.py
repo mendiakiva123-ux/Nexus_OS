@@ -19,9 +19,10 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs: text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             init_genai()
-            model = genai.GenerativeModel('gemini-1.5-flash')
+            # משתמשים במודל 2.0 שקיים אצלך ברשימה
+            model = genai.GenerativeModel('gemini-2.0-flash')
             img = Image.open(uploaded_file)
-            text = model.generate_content(["Extract all text.", img]).text
+            text = model.generate_content(["Extract all text accurately.", img]).text
     except Exception as e:
         return f"🚨 שגיאה בסריקה: {e}"
     return text
@@ -29,8 +30,8 @@ def extract_text_from_file(uploaded_file):
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
         init_genai()
-        # ניסיון התחברות למודל היציב ביותר
-        model = genai.GenerativeModel('gemini-1.5-flash')
+        # נועלים על המודל שגוגל אישרה לך ברשימה
+        model = genai.GenerativeModel('gemini-2.0-flash')
         
         system_msg = f"You are Nexus AI, a professional academic assistant. Subject: {subject}. Respond in Hebrew."
         full_p = f"{system_msg}\n\n"
@@ -42,9 +43,4 @@ def get_ai_response_stream(subject, prompt, file_context=""):
             if chunk.text: yield chunk.text
 
     except Exception as e:
-        # אם יש שגיאה, ננסה להבין אילו מודלים גוגל כן נותנת לנו
-        try:
-            available = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-            yield f"🚨 שגיאה: {str(e)}. מודלים זמינים במערכת שלך: {', '.join(available)}"
-        except:
-            yield f"🚨 שגיאת API: {str(e)}. וודא שהמפתח ב-Secrets תקין."
+        yield f"🚨 שגיאה: {str(e)}"
