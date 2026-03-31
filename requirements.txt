@@ -4,7 +4,7 @@ pandas
 plotly
 supabase
 st-supabase-connection
-requests
+google-generativeai
 PyPDF2
 python-docx
 Pillow
