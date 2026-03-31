@@ -2,17 +2,19 @@ import streamlit as st
 from streamlit_option_menu import option_menu
 import pandas as pd
 from database_manager import init_db, save_grade, get_all_grades, clear_db
-from ai_manager import get_ai_response_stream
+from ai_manager import get_ai_response_stream, extract_text_from_file
 
 # --- 1. הגדרות מערכת ---
 st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
-# --- 2. מילון שפות ומקצועות לימוד ---
+# --- 2. מילון שפות וזיכרון (כולל זיכרון לקבצים!) ---
 if 'lang' not in st.session_state:
     st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state:
     st.session_state.chat_history = []
+if 'file_contexts' not in st.session_state:
+    st.session_state.file_contexts = {} # מילון ששומר את החומר של כל מקצוע!
 
 SUBJECTS_HE = ["General / כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
 SUBJECTS_EN = ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Computer Science", "Other"]
@@ -21,37 +23,31 @@ t = {
     "עברית": {
         "dash": "דאשבורד", "tutor": "AI Tutor 🤖", "history": "היסטוריה", "settings": "הגדרות",
         "avg": "ממוצע אקדמי", "total": "סה\"כ משימות", "add": "הזנת ציונים", "sub": "מקצוע",
-        "topic": "נושא", "grade": "ציון", "save": "שמור נתונים", "upload_title": "העלאת חומר",
+        "topic": "נושא", "grade": "ציון", "save": "שמור נתונים", "upload_title": "העלאת וקריאת חומר",
         "ask": "שאל אותי משהו...", "subjects": SUBJECTS_HE
     },
     "English": {
         "dash": "Dashboard", "tutor": "AI Tutor 🤖", "history": "History", "settings": "Settings",
         "avg": "Average Score", "total": "Total Records", "add": "Add Grade", "sub": "Subject",
-        "topic": "Topic", "grade": "Grade", "save": "Save Record", "upload_title": "Upload Data",
+        "topic": "Topic", "grade": "Grade", "save": "Save Record", "upload_title": "Upload & Learn Material",
         "ask": "Ask me anything...", "subjects": SUBJECTS_EN
     }
 }
 cur = t[st.session_state.lang]
 
-# --- 3. עיצוב חכם ויוקרתי (Glassmorphism) ---
+# --- 3. עיצוב Glassmorphism (נשאר יוקרתי ומדויק) ---
 st.markdown("""
     <style>
     * { transition: none !important; animation: none !important; }
-    
     [data-testid="stAppViewContainer"] {
-        background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364) !important;
-        color: #ffffff;
+        background: radial-gradient(circle at top left, #0f2027, #203a43, #2c5364) !important; color: #ffffff;
     }
-    
     section[data-testid="stSidebar"] {
-        background-color: rgba(15, 32, 39, 0.6) !important;
-        backdrop-filter: blur(10px);
+        background-color: rgba(15, 32, 39, 0.6) !important; backdrop-filter: blur(10px);
         border-right: 1px solid rgba(255, 255, 255, 0.1);
     }
-    
     div[data-testid="stMetric"] {
-        background: rgba(255, 255, 255, 0.05) !important;
-        border: 1px solid rgba(0, 209, 255, 0.3) !important;
+        background: rgba(255, 255, 255, 0.05) !important; border: 1px solid rgba(0, 209, 255, 0.3) !important;
         border-radius: 20px; padding: 20px; backdrop-filter: blur(10px);
     }
     div[data-testid="stMetricValue"] { color: #00D1FF !important; font-weight: 900 !important; font-size: 3rem !important; }
@@ -64,7 +60,6 @@ st.markdown("""
     div[role="listbox"] ul li, div[data-baseweb="popover"] span {
         color: black !important; font-weight: bold !important; background-color: white !important;
     }
-    
     button[data-testid="sidebar-button"] svg { 
         fill: black !important; color: black !important; background-color: white !important; border-radius: 4px; padding: 2px;
     }
@@ -73,20 +68,11 @@ st.markdown("""
     </style>
     """, unsafe_allow_html=True)
 
-# --- תוספת יישור לימין (RTL) עבור עברית בלבד ---
 if st.session_state.lang == "עברית":
     st.markdown("""
         <style>
-        /* יישור הצ'אט והטקסט בתוכו לימין */
-        [data-testid="stChatMessageContent"], [data-testid="stChatMessageContent"] * {
-            direction: rtl !important;
-            text-align: right !important;
-        }
-        /* יישור תיבת ההקלדה שלך לימין */
-        [data-testid="stChatInput"] textarea {
-            direction: rtl !important;
-            text-align: right !important;
-        }
+        [data-testid="stChatMessageContent"], [data-testid="stChatMessageContent"] * { direction: rtl !important; text-align: right !important; }
+        [data-testid="stChatInput"] textarea { direction: rtl !important; text-align: right !important; }
         </style>
     """, unsafe_allow_html=True)
 
@@ -99,21 +85,11 @@ with st.sidebar:
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
         st.rerun()
-        
     st.divider()
     
-    selected = option_menu(
-        menu_title=None, 
-        options=[cur["dash"], cur["tutor"], cur["history"], cur["settings"]], 
-        icons=["grid-1x2-fill", "cpu-fill", "clock-history", "sliders"], 
-        default_index=0,
-        styles={
-            "container": {"background-color": "transparent"},
-            "nav-link": {"color": "#e0e0e0", "font-size": "16px", "border-radius": "10px", "margin":"5px 0"},
-            "nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.15)", "color": "#00D1FF", "border": "1px solid #00D1FF"}
-        }
-    )
-    
+    selected = option_menu(None, [cur["dash"], cur["tutor"], cur["history"], cur["settings"]], 
+                           icons=["grid-1x2-fill", "cpu-fill", "clock-history", "sliders"], default_index=0,
+                           styles={"container": {"background-color": "transparent"}, "nav-link": {"color": "#e0e0e0"}, "nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.15)", "color": "#00D1FF", "border": "1px solid #00D1FF"}})
     st.divider()
     if st.button("🗑️ Clear Chat History", use_container_width=True):
         st.session_state.chat_history = []
@@ -147,12 +123,26 @@ if selected == cur["dash"]:
                 st.rerun()
     with col2:
         st.markdown(f"### 📁 {cur['upload_title']}")
-        st.file_uploader("PDF/Docx", type=["pdf", "docx"])
+        upload_sub = st.selectbox("Assign material to subject:", cur["subjects"][1:], key="upload_sub")
+        uploaded_file = st.file_uploader("PDF/Docx", type=["pdf", "docx"])
+        
+        # מנגנון קריאת הקובץ ושמירתו בזיכרון הבוט!
+        if uploaded_file is not None:
+            if st.button("🧠 Learn File Content"):
+                with st.spinner("Extracting knowledge..."):
+                    extracted_text = extract_text_from_file(uploaded_file)
+                    st.session_state.file_contexts[upload_sub] = extracted_text
+                    st.success(f"Nexus OS successfully learned the material for {upload_sub}!")
 
 elif selected == cur["tutor"]:
     st.markdown(f"<h1>🧠 {cur['tutor']}</h1>", unsafe_allow_html=True)
     sub_choice = st.selectbox(cur["sub"], cur["subjects"]) 
     
+    # בדיקה האם המערכת קראה קובץ על המקצוע הזה בעבר
+    current_file_context = st.session_state.file_contexts.get(sub_choice, "")
+    if current_file_context:
+        st.info("📚 Context Active: The AI is utilizing your uploaded study materials for this subject.")
+
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
@@ -165,9 +155,9 @@ elif selected == cur["tutor"]:
         with st.chat_message("assistant"):
             res_box = st.empty()
             full_res = ""
-            for chunk in get_ai_response_stream(sub_choice, prompt):
+            # שליחה של ההקשר (הקובץ) לבוט יחד עם השאלה
+            for chunk in get_ai_response_stream(sub_choice, prompt, file_context=current_file_context):
                 full_res += chunk
-                # שינוי קטן כדי שהסמן ייראה טוב מימין לשמאל
                 res_box.markdown(full_res + " ▌")
             res_box.markdown(full_res)
             st.session_state.chat_history.append({"role": "assistant", "content": full_res})
@@ -178,8 +168,6 @@ elif selected == cur["history"]:
         st.info("No records found.")
     else:
         st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button(label="📥 Download Data (CSV)", data=csv, file_name='nexus_grades.csv', mime='text/csv')
 
 elif selected == cur["settings"]:
     st.markdown(f"<h1>⚙️ {cur['settings']}</h1>", unsafe_allow_html=True)
