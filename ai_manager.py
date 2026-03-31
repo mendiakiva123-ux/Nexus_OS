@@ -19,9 +19,7 @@ def extract_text_from_file(uploaded_file):
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             image_bytes = uploaded_file.getvalue()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
-            payload = {
-                "contents": [{"parts": [{"text": "Extract all text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}]}]
-            }
+            payload = {"contents": [{"parts": [{"text": "Extract text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}]}]}
             res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0]['text']
@@ -31,22 +29,8 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
-    
-    # 1. מציאת המודל בצורה חסינה
-    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-    model_name = "models/gemini-1.5-flash" # ברירת מחדל
-    try:
-        r = requests.get(list_url)
-        if r.status_code == 200:
-            for m in r.json().get("models", []):
-                if "generateContent" in m.get("supportedGenerationMethods", []):
-                    model_name = m["name"]
-                    if "flash" in model_name: break
-    except: pass
-
-    # 2. ניקוי השם למניעת 404 (לוודא שאין כפילות של models/)
-    clean_model = model_name.replace("models/", "")
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{clean_model}:streamGenerateContent?alt=sse&key={api_key}"
+    # שימוש ישיר במודל פלאש למניעת בקשות מיותרות לשרת
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
     headers = {'Content-Type': 'application/json'}
     payload = {
@@ -55,8 +39,12 @@ def get_ai_response_stream(subject, prompt, file_context=""):
 
     try:
         response = requests.post(url, headers=headers, json=payload, stream=True)
-        if response.status_code != 200:
-            yield f"🚨 שגיאת שרת גוגל: {response.status_code}. וודא שהמפתח תקין."
+        
+        if response.status_code == 429:
+            yield "🚨 עומס על השרת (429). גוגל מגבילה את כמות השאלות בדקה. המתן 30 שניות ונסה שוב."
+            return
+        elif response.status_code != 200:
+            yield f"🚨 שגיאת שרת: {response.status_code}. בדוק את המפתח ב-Secrets."
             return
 
         for line in response.iter_lines():
