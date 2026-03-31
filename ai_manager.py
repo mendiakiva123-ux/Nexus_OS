@@ -19,7 +19,6 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs: text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             init_genai()
-            # משתמשים במודל 2.0 שקיים אצלך ברשימה
             model = genai.GenerativeModel('gemini-2.0-flash')
             img = Image.open(uploaded_file)
             text = model.generate_content(["Extract all text accurately.", img]).text
@@ -30,17 +29,16 @@ def extract_text_from_file(uploaded_file):
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
         init_genai()
-        # נועלים על המודל שגוגל אישרה לך ברשימה
+        # שימוש במודל 2.0 פלאש שקיים ברשימה שלך
         model = genai.GenerativeModel('gemini-2.0-flash')
         
-        system_msg = f"You are Nexus AI, a professional academic assistant. Subject: {subject}. Respond in Hebrew."
+        system_msg = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew."
         full_p = f"{system_msg}\n\n"
-        if file_context: full_p += f"Context: {file_context[:8000]}\n\n"
-        full_p += f"Question: {prompt}"
+        if file_context: full_p += f"Context from files:\n{file_context[:8000]}\n\n"
+        full_p += f"User Question: {prompt}"
 
         response = model.generate_content(full_p, stream=True)
         for chunk in response:
             if chunk.text: yield chunk.text
-
     except Exception as e:
-        yield f"🚨 שגיאה: {str(e)}"
+        yield f"🚨 שגיאת API: {str(e)}"
