@@ -34,15 +34,15 @@ def extract_text_from_file(uploaded_file):
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0]['text']
             else:
-                return f"🚨 שגיאה בפענוח התמונה: {res.text}"
+                return f"🚨 שגיאה בתמונה: {res.text}"
     except Exception as e:
         return f"🚨 Error: {e}"
     return text
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
-    # מציאת המודל שעובד אצלך באופן דינמי
     list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
+    
     try:
         list_res = requests.get(list_url)
         models_list = list_res.json().get("models", [])
@@ -54,15 +54,15 @@ def get_ai_response_stream(subject, prompt, file_context=""):
         if not valid_model:
             yield "🚨 לא נמצא מודל נתמך."
             return
-    except Exception as e:
-        yield f"🚨 שגיאה מול גוגל: {e}"
+    except Exception:
+        yield "🚨 שגיאת חיבור לגוגל."
         return
 
     stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
     
     system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew."
     if file_context:
-        system_prompt += f"\n\nStudy Material Context:\n{file_context[:10000]}"
+        system_prompt += f"\n\nContext:\n{file_context[:15000]}"
 
     payload = {
         "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}],
@@ -78,6 +78,5 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                 if data_str.strip() == "[DONE]": break
                 try:
                     chunk_json = json.loads(data_str)
-                    text_chunk = chunk_json['candidates'][0]['content']['parts'][0].get('text', '')
-                    yield text_chunk
+                    yield chunk_json['candidates'][0]['content']['parts'][0].get('text', '')
                 except: continue
