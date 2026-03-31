@@ -21,7 +21,7 @@ def extract_text_from_file(uploaded_file):
                 
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"]
-            # שימוש בגרסת V1 היציבה ביותר לפענוח תמונות
+            # שימוש בגרסת v1 היציבה שעבדה לך מעולה!
             url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
             
             image_bytes = uploaded_file.getvalue()
@@ -40,13 +40,7 @@ def extract_text_from_file(uploaded_file):
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0]['text']
             else:
-                # גיבוי למודל Pro במידה והפלאש לא זמין
-                url_pro = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-pro:generateContent?key={api_key}"
-                res_pro = requests.post(url_pro, headers={'Content-Type': 'application/json'}, json=payload)
-                if res_pro.status_code == 200:
-                    text = res_pro.json()['candidates'][0]['content']['parts'][0]['text']
-                else:
-                    return f"🚨 שגיאה בפענוח התמונה: {res.text}"
+                return f"🚨 שגיאה בפענוח התמונה: {res.text}"
                 
     except Exception as e:
         return f"🚨 Error extracting text: {e}"
@@ -55,41 +49,8 @@ def extract_text_from_file(uploaded_file):
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
-    # שלב 1: המסנן החכם - שואבים את הרשימה ומסננים את ה-2.5 הבעייתי!
-    list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
-    try:
-        list_res = requests.get(list_url)
-        if list_res.status_code != 200:
-            yield f"🚨 שגיאת התחברות לגוגל: {list_res.text}"
-            return
-            
-        models_list = list_res.json().get("models", [])
-        valid_model = None
-        
-        for m in models_list:
-            name = m.get("name", "")
-            methods = m.get("supportedGenerationMethods", [])
-            
-            # אם המודל תומך ביצירת טקסט והוא לא 2.5 (כדי לחמוק ממגבלת 20 ההודעות)
-            if "generateContent" in methods and "2.5" not in name:
-                # ניקח את פלאש אם יש אותו
-                if "flash" in name:
-                    valid_model = name
-                    break
-                # אחרת, נשמור את המודל הראשון שמצאנו כגיבוי (כמו Pro)
-                elif valid_model is None:
-                    valid_model = name
-                    
-        if not valid_model:
-            yield "🚨 לא נמצא מודל תקין ללא מגבלת הודעות בחשבון שלך."
-            return
-            
-    except Exception as e:
-        yield f"🚨 שגיאה בשליפת מודלים: {e}"
-        return
-
-    # שלב 2: הזרמת הנתונים עם המודל הנקי
-    stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
+    # חיבור ישיר, פשוט ויציב לגרסה V1 עם סטרימינג
+    stream_url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
     system_prompt = f"""You are Nexus AI, an elite academic assistant. Current subject: {subject}.
@@ -106,7 +67,7 @@ def get_ai_response_stream(subject, prompt, file_context=""):
     
     payload = {
         "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}],
-        "tools": [{"googleSearch": {}}] 
+        "tools": [{"googleSearch": {}}] # כאן חיברנו אותו לאינטרנט
     }
     
     try:
@@ -114,7 +75,7 @@ def get_ai_response_stream(subject, prompt, file_context=""):
         res.encoding = 'utf-8' 
         
         if res.status_code == 429:
-            yield "🚨 חרגת ממכסת הבקשות של גוגל. המתן מעט ונסה שוב."
+            yield "🚨 שגיאת עומס מגוגל. מכיוון שעברנו למודל היציב, זה אמור להשתחרר תוך דקה לכל היותר. נסה שוב."
             return
         elif res.status_code != 200:
             yield f"🚨 שגיאה בשרת גוגל: {res.status_code} - {res.text}"
