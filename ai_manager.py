@@ -21,39 +21,32 @@ def extract_text_from_file(uploaded_file):
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
             payload = {
                 "contents": [{"parts": [
-                    {"text": "Extract all the text from this image accurately."},
+                    {"text": "Extract all text from this image."},
                     {"inlineData": {"mimeType": uploaded_file.type, "data": encoded_image}}
                 ]}]
             }
             res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
             if res.status_code == 200:
-                text = res.json()['candidates'][0]['content']['parts'][0]['text']
+                text = res.json()['candidates'][0]['content']['parts'][0].get('text', '')
     except Exception as e:
-        return f"🚨 שגיאת סריקה: {e}"
+        return f"🚨 Error: {e}"
     return text
 
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
+    # שימוש ב-1.5-flash למכסה גבוהה
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
-    # נעילה על 1.5-flash למניעת שגיאות מכסה (429)
-    model = "gemini-1.5-flash"
-    url = f"https://generativelanguage.googleapis.com/v1beta/models/{model}:streamGenerateContent?alt=sse&key={api_key}"
-    
-    headers = {'Content-Type': 'application/json'}
     system_prompt = f"You are Nexus AI, an elite academic assistant. Subject: {subject}. Respond in Hebrew."
     if file_context:
-        system_prompt += f"\n\nPRIORITY CONTEXT:\n{file_context[:15000]}"
+        system_prompt += f"\n\nContext:\n{file_context[:12000]}"
 
     payload = {
-        "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}]
+        "contents": [{"parts": [{"text": f"{system_prompt}\n\nQuestion: {prompt}"}]}]
     }
 
     try:
-        res = requests.post(url, headers=headers, json=payload, stream=True)
-        if res.status_code == 429:
-            yield "🚨 הגעת למכסה היומית של המודל החדש. המערכת עברה אוטומטית למודל יציב, נסה שוב בעוד רגע."
-            return
-            
+        res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, stream=True)
         for line in res.iter_lines():
             if line:
                 decoded = line.decode('utf-8')
@@ -61,8 +54,12 @@ def get_ai_response_stream(subject, prompt, file_context=""):
                     data_str = decoded[6:]
                     if data_str.strip() == "[DONE]": break
                     try:
-                        chunk_json = json.loads(data_str)
-                        yield chunk_json['candidates'][0]['content']['parts'][0].get('text', '')
+                        chunk = json.loads(data_str)
+                        # חילוץ חסין שגיאות:
+                        if 'candidates' in chunk and chunk['candidates']:
+                            part = chunk['candidates'][0].get('content', {}).get('parts', [{}])[0]
+                            text = part.get('text', '')
+                            if text: yield text
                     except: continue
     except Exception as e:
-        yield f"🚨 תקלה: {e}"
+        yield f"🚨 Connection Error: {e}"
