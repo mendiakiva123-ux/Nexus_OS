@@ -7,36 +7,35 @@ from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
 # --- Core Setup ---
-st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Nexus OS | Ultra Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- Translation Dictionary ---
-SUBJECTS_HE = ["כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
-SUBJECTS_EN = ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Computer Science", "Other"]
-
+# --- מערכת תרגום מלאה ---
 t = {
     "עברית": {
-        "dash": "מרכז שליטה", "tutor": "Nexus AI", "hist": "ארכיון", "set": "מערכת",
+        "dash": "מרכז שליטה", "tutor": "Nexus AI", "hist": "ארכיון ציונים", "set": "מערכת",
         "avg": "ממוצע אקדמי", "total": "סה\"כ רשומות", "status": "מצב ליבה", "opt": "אופטימלי",
-        "add_title": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "sync": "סנכרן נתונים",
-        "up_title": "🧠 סריקת חומר", "ingest": "טען למוח ה-AI", "ask": "שאל את Nexus...",
-        "purge_chat": "🗑️ נקה צ'אט", "purge_db": "🚨 איפוס מסד נתונים", "subjects": SUBJECTS_HE
+        "add_t": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "sync": "סנכרן נתונים",
+        "up_t": "🧠 סריקת חומר", "ingest": "טען למוח ה-AI", "ask": "הזן שאילתה למערכת...",
+        "purge_c": "🗑️ נקה צ'אט", "purge_d": "🚨 איפוס מסד נתונים", "lang_l": "שפת ממשק",
+        "subjects": ["כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
     },
     "English": {
-        "dash": "Command Center", "tutor": "Nexus AI", "hist": "Archive", "set": "System",
-        "avg": "Academic Avg", "total": "Total Records", "status": "Core Status", "opt": "Optimal",
-        "add_title": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "sync": "Sync Data",
-        "up_title": "🧠 Neural Scanning", "ingest": "Ingest to AI", "ask": "Ask Nexus...",
-        "purge_chat": "🗑️ Purge Chat", "purge_db": "🚨 Reset DB", "subjects": SUBJECTS_EN
+        "dash": "Command Center", "tutor": "Nexus AI", "hist": "Archives", "set": "System",
+        "avg": "Academic Avg", "total": "Total Tasks", "status": "Core Status", "opt": "Optimal",
+        "add_t": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "sync": "Sync Data",
+        "up_t": "🧠 Neural Scanning", "ingest": "Ingest to AI", "ask": "Input query...",
+        "purge_c": "🗑️ Purge Chat", "purge_d": "🚨 Reset Database", "lang_l": "Interface Language",
+        "subjects": ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Comp Science", "Other"]
     }
 }
 cur = t[st.session_state.lang]
 
-# --- CSS (Cyber-Elite UI) ---
+# --- Cyber-Elite CSS ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
@@ -56,7 +55,8 @@ if st.session_state.lang == "עברית":
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown("<h2>NEXUS OS</h2>", unsafe_allow_html=True)
+    st.markdown(f"<h2>NEXUS OS</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center; color:#888;'>{cur['lang_l']}</p>", unsafe_allow_html=True)
     lang_choice = st.radio("", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
     if lang_choice != st.session_state.lang:
         st.session_state.lang = lang_choice
@@ -65,35 +65,35 @@ with st.sidebar:
     selected = option_menu(None, [cur["dash"], cur["tutor"], cur["hist"], cur["set"]],
                            icons=["cpu-fill", "robot", "database-fill", "gear-wide-connected"], default_index=0,
                            styles={"nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.2)", "color": "#00D1FF"}})
-    if st.button(cur["purge_chat"]):
+    if st.button(cur["purge_c"]):
         st.session_state.chat_history = []; st.rerun()
 
 df = get_all_grades()
 
-# --- Command Center ---
+# --- Logic Pages ---
 if selected == cur["dash"]:
     st.markdown(f"<h1>{cur['dash']}</h1>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    avg_val = df['grade'].mean() if not df.empty else 0.0
-    c1.metric(cur["avg"], f"{avg_val:.1f}")
+    avg_v = df['grade'].mean() if not df.empty else 0.0
+    c1.metric(cur["avg"], f"{avg_v:.1f}")
     c2.metric(cur["total"], len(df))
     c3.metric(cur["status"], cur["opt"])
     
     l, r = st.columns([1, 1.2])
     with l:
-        st.markdown(f"### {cur['add_title']}")
-        with st.form("grade_form", clear_on_submit=True):
+        st.markdown(f"### {cur['add_t']}")
+        with st.form("grade_f", clear_on_submit=True):
             sub = st.selectbox(cur["sub"], cur["subjects"])
             tp = st.text_input(cur["top"])
             grd = st.number_input(cur["grd"], 0, 100, 90)
             if st.form_submit_button(cur["sync"]):
                 save_grade(sub, tp, grd); st.rerun()
         
-        st.markdown(f"### {cur['up_title']}")
+        st.markdown(f"### {cur['up_t']}")
         up = st.file_uploader("", type=["pdf", "docx", "png", "jpg", "jpeg"])
         if up and st.button(cur["ingest"]):
             st.session_state.file_contexts[sub] = extract_text_from_file(up)
-            st.success("Knowledge Loaded!")
+            st.success("Loaded!")
 
     with r:
         if not df.empty:
@@ -101,11 +101,10 @@ if selected == cur["dash"]:
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="#00D1FF")
             st.plotly_chart(fig, use_container_width=True)
 
-# --- Nexus AI ---
 elif selected == cur["tutor"]:
     st.markdown(f"<h1>{cur['tutor']}</h1>", unsafe_allow_html=True)
-    sub_choice = st.selectbox(cur["sub"], cur["subjects"])
-    ctx = st.session_state.file_contexts.get(sub_choice, "")
+    sub_c = st.selectbox(cur["sub"], cur["subjects"])
+    ctx = st.session_state.file_contexts.get(sub_c, "")
     
     chat_box = st.container(height=500)
     for m in st.session_state.chat_history:
@@ -115,16 +114,14 @@ elif selected == cur["tutor"]:
         st.session_state.chat_history.append({"role": "user", "content": p})
         with chat_box.chat_message("user"): st.markdown(p)
         with chat_box.chat_message("assistant"):
-            full_res = st.write_stream(get_ai_response_stream(sub_choice, p, ctx))
+            full_res = st.write_stream(get_ai_response_stream(sub_c, p, ctx))
         st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
-# --- Archive ---
 elif selected == cur["hist"]:
     st.markdown(f"<h1>{cur['hist']}</h1>", unsafe_allow_html=True)
     st.dataframe(df.sort_values(by='date', ascending=False), use_container_width=True)
 
-# --- System ---
 elif selected == cur["set"]:
     st.markdown(f"<h1>{cur['set']}</h1>", unsafe_allow_html=True)
-    if st.button(cur["purge_db"]):
+    if st.button(cur["purge_d"]):
         clear_db(); st.rerun()
