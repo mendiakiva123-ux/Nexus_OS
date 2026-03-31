@@ -1,47 +1,43 @@
 import streamlit as st
 from streamlit_option_menu import option_menu
 import pandas as pd
-import datetime
 import plotly.express as px
 from database_manager import init_db, save_grade, get_all_grades, clear_db
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
-# --- Core Setup ---
-st.set_page_config(page_title="Nexus OS | Ultra Core", layout="wide", initial_sidebar_state="expanded")
+# --- Setup ---
+st.set_page_config(page_title="Nexus OS | Core", layout="wide", initial_sidebar_state="expanded")
 init_db()
 
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {}
 
-# --- מערכת תרגום מלאה ---
+# --- מערכת תרגום אחידה ---
 t = {
     "עברית": {
-        "dash": "מרכז שליטה", "tutor": "Nexus AI", "hist": "ארכיון ציונים", "set": "מערכת",
-        "avg": "ממוצע אקדמי", "total": "סה\"כ רשומות", "status": "מצב ליבה", "opt": "אופטימלי",
-        "add_t": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "sync": "סנכרן נתונים",
-        "up_t": "🧠 סריקת חומר", "ingest": "טען למוח ה-AI", "ask": "הזן שאילתה למערכת...",
-        "purge_c": "🗑️ נקה צ'אט", "purge_d": "🚨 איפוס מסד נתונים", "lang_l": "שפת ממשק",
-        "subjects": ["כללי", "מתמטיקה", "פיזיקה", "כתיבה אקדמאית", "עברית", "מדעי המחשב", "אחר"]
+        "title": "NEXUS OS", "welcome": "ברוך הבא, מנדי", "dash": "דאשבורד", "tutor": "AI Tutor 🤖",
+        "hist": "היסטוריה", "set": "הגדרות", "avg": "ממוצע אקדמי", "total": "רשומות", "status": "מצב מערכת",
+        "add": "📝 הזנת נתונים", "sub": "מקצוע", "top": "נושא", "grd": "ציון", "save": "שמור נתונים",
+        "upload": "📁 טעינת חומר", "learn": "🧠 למד חומר", "ask": "שאל את Nexus...", "purge": "נקה צ'אט",
+        "reset": "🚨 איפוס מסד נתונים", "subjects": ["כללי", "מתמטיקה", "פיזיקה", "מדעי המחשב", "אחר"]
     },
     "English": {
-        "dash": "Command Center", "tutor": "Nexus AI", "hist": "Archives", "set": "System",
-        "avg": "Academic Avg", "total": "Total Tasks", "status": "Core Status", "opt": "Optimal",
-        "add_t": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "sync": "Sync Data",
-        "up_t": "🧠 Neural Scanning", "ingest": "Ingest to AI", "ask": "Input query...",
-        "purge_c": "🗑️ Purge Chat", "purge_d": "🚨 Reset Database", "lang_l": "Interface Language",
-        "subjects": ["General", "Math", "Physics", "Academic Writing", "Hebrew", "Comp Science", "Other"]
+        "title": "NEXUS OS", "welcome": "Welcome, Mendi", "dash": "Dashboard", "tutor": "AI Tutor 🤖",
+        "hist": "History", "set": "Settings", "avg": "Academic Avg", "total": "Records", "status": "Status",
+        "add": "📝 Data Input", "sub": "Subject", "top": "Topic", "grd": "Grade", "save": "Save Data",
+        "upload": "📁 Upload Material", "learn": "🧠 Ingest Material", "ask": "Ask Nexus...", "purge": "Purge Chat",
+        "reset": "🚨 Reset Database", "subjects": ["General", "Math", "Physics", "Computer Science", "Other"]
     }
 }
 cur = t[st.session_state.lang]
 
-# --- Cyber-Elite CSS ---
+# --- CSS Cyber-Elite ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;900&display=swap');
     [data-testid="stAppViewContainer"] {{ background: linear-gradient(225deg, #050505 0%, #001219 50%, #002233 100%) !important; color: white; }}
-    [data-testid="collapsedControl"] {{ display: none !important; }}
-    div[data-testid="stMetric"] {{ background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(0, 209, 255, 0.3) !important; border-radius: 20px; padding: 25px; backdrop-filter: blur(20px); }}
+    div[data-testid="stMetric"] {{ background: rgba(255, 255, 255, 0.03) !important; border: 1px solid rgba(0, 209, 255, 0.3) !important; border-radius: 20px; padding: 20px; backdrop-filter: blur(10px); }}
     div[data-testid="stMetricValue"] {{ color: #00D1FF !important; font-family: 'Orbitron', sans-serif; }}
     .stButton>button {{ background: transparent !important; color: #00D1FF !important; border: 2px solid #00D1FF !important; border-radius: 12px; font-weight: 900; width: 100%; }}
     .stButton>button:hover {{ background: #00D1FF !important; color: #000 !important; box-shadow: 0 0 25px #00D1FF; }}
@@ -55,45 +51,41 @@ if st.session_state.lang == "עברית":
 
 # --- Sidebar ---
 with st.sidebar:
-    st.markdown(f"<h2>NEXUS OS</h2>", unsafe_allow_html=True)
-    st.markdown(f"<p style='text-align:center; color:#888;'>{cur['lang_l']}</p>", unsafe_allow_html=True)
+    st.markdown(f"<h2>{cur['title']}</h2>", unsafe_allow_html=True)
+    st.markdown(f"<p style='text-align:center; color:#888;'>{cur['welcome']}</p>", unsafe_allow_html=True)
     lang_choice = st.radio("", ["עברית", "English"], index=0 if st.session_state.lang == "עברית" else 1, horizontal=True)
     if lang_choice != st.session_state.lang:
-        st.session_state.lang = lang_choice
-        st.rerun()
+        st.session_state.lang = lang_choice; st.rerun()
     st.divider()
     selected = option_menu(None, [cur["dash"], cur["tutor"], cur["hist"], cur["set"]],
-                           icons=["cpu-fill", "robot", "database-fill", "gear-wide-connected"], default_index=0,
+                           icons=["grid-fill", "cpu-fill", "clock-history", "gear-fill"], default_index=0,
                            styles={"nav-link-selected": {"background-color": "rgba(0, 209, 255, 0.2)", "color": "#00D1FF"}})
-    if st.button(cur["purge_c"]):
-        st.session_state.chat_history = []; st.rerun()
+    if st.button(cur["purge"]): st.session_state.chat_history = []; st.rerun()
 
 df = get_all_grades()
 
-# --- Logic Pages ---
 if selected == cur["dash"]:
     st.markdown(f"<h1>{cur['dash']}</h1>", unsafe_allow_html=True)
     c1, c2, c3 = st.columns(3)
-    avg_v = df['grade'].mean() if not df.empty else 0.0
-    c1.metric(cur["avg"], f"{avg_v:.1f}")
+    avg_val = df['grade'].mean() if not df.empty else 0.0
+    c1.metric(cur["avg"], f"{avg_val:.1f}")
     c2.metric(cur["total"], len(df))
-    c3.metric(cur["status"], cur["opt"])
+    c3.metric(cur["status"], "Optimal")
     
     l, r = st.columns([1, 1.2])
     with l:
-        st.markdown(f"### {cur['add_t']}")
-        with st.form("grade_f", clear_on_submit=True):
-            sub = st.selectbox(cur["sub"], cur["subjects"])
+        st.markdown(f"### {cur['add']}")
+        with st.form("gf", clear_on_submit=True):
+            sub = st.selectbox(cur["sub"], cur["subjects"][1:])
             tp = st.text_input(cur["top"])
             grd = st.number_input(cur["grd"], 0, 100, 90)
-            if st.form_submit_button(cur["sync"]):
-                save_grade(sub, tp, grd); st.rerun()
+            if st.form_submit_button(cur["save"]): save_grade(sub, tp, grd); st.rerun()
         
-        st.markdown(f"### {cur['up_t']}")
+        st.markdown(f"### {cur['upload']}")
         up = st.file_uploader("", type=["pdf", "docx", "png", "jpg", "jpeg"])
-        if up and st.button(cur["ingest"]):
+        if up and st.button(cur["learn"]):
             st.session_state.file_contexts[sub] = extract_text_from_file(up)
-            st.success("Loaded!")
+            st.success("Knowledge Loaded!")
 
     with r:
         if not df.empty:
@@ -103,8 +95,8 @@ if selected == cur["dash"]:
 
 elif selected == cur["tutor"]:
     st.markdown(f"<h1>{cur['tutor']}</h1>", unsafe_allow_html=True)
-    sub_c = st.selectbox(cur["sub"], cur["subjects"])
-    ctx = st.session_state.file_contexts.get(sub_c, "")
+    sub_sel = st.selectbox(cur["sub"], cur["subjects"])
+    ctx = st.session_state.file_contexts.get(sub_sel, "")
     
     chat_box = st.container(height=500)
     for m in st.session_state.chat_history:
@@ -114,7 +106,7 @@ elif selected == cur["tutor"]:
         st.session_state.chat_history.append({"role": "user", "content": p})
         with chat_box.chat_message("user"): st.markdown(p)
         with chat_box.chat_message("assistant"):
-            full_res = st.write_stream(get_ai_response_stream(sub_c, p, ctx))
+            full_res = st.write_stream(get_ai_response_stream(sub_sel, p, ctx, st.session_state.lang))
         st.session_state.chat_history.append({"role": "assistant", "content": full_res})
 
 elif selected == cur["hist"]:
@@ -123,5 +115,4 @@ elif selected == cur["hist"]:
 
 elif selected == cur["set"]:
     st.markdown(f"<h1>{cur['set']}</h1>", unsafe_allow_html=True)
-    if st.button(cur["purge_d"]):
-        clear_db(); st.rerun()
+    if st.button(cur["reset"]): clear_db(); st.rerun()
