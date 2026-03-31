@@ -5,28 +5,13 @@ import docx
 from PIL import Image
 import io
 
-# --- פונקציה למציאת המודל היציב בלבד (1.5 בלבד!) ---
-def get_stable_model():
-    try:
-        api_key = st.secrets["GOOGLE_API_KEY"]
-        genai.configure(api_key=api_key)
-        
-        models = genai.list_models()
-        available_models = [m.name for m in models if 'generateContent' in m.supported_generation_methods]
-        
-        # סינון אגרסיבי: מחפשים 1.5-flash ומתעלמים מכל מה שקשור ל-2.5 או experimental
-        for m_name in available_models:
-            if 'gemini-1.5-flash' in m_name and '2.5' not in m_name:
-                return m_name
-        
-        # גיבוי למקרה שגוגל שינו שמות - מחפשים 1.5 כלשהו
-        for m_name in available_models:
-            if '1.5' in m_name and '2.5' not in m_name:
-                return m_name
-                
-        return 'models/gemini-1.5-flash' # ברירת מחדל קשיחה ויציבה
-    except Exception:
-        return 'models/gemini-1.5-flash'
+# --- פונקציית עזר להגדרת המודל (נעילה על 1.5 פלאש) ---
+def setup_model():
+    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=api_key)
+    # אנחנו נועלים על 1.5-flash כי הוא הכי יציב עם מכסה גדולה
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    return model
 
 # --- פונקציית סריקה (PDF, Word, תמונות) ---
 def extract_text_from_file(uploaded_file):
@@ -41,8 +26,7 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs:
                 text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
-            model_name = get_stable_model()
-            model = genai.GenerativeModel(model_name)
+            model = setup_model()
             img = Image.open(uploaded_file)
             response = model.generate_content(["Extract all text from this image accurately.", img])
             text = response.text
@@ -50,16 +34,14 @@ def extract_text_from_file(uploaded_file):
         return f"🚨 שגיאה בסריקה: {e}"
     return text
 
-# --- מנוע הבוט היציב (ללא 2.5!) ---
+# --- מנוע הבוט (מיועד לסטרימינג יציב) ---
 def get_ai_response_stream(subject, prompt, file_context=""):
     try:
-        # נועלים את המערכת על המודל היציב
-        model_name = get_stable_model()
-        model = genai.GenerativeModel(model_name)
+        model = setup_model()
         
         system_instruction = (
             f"You are Nexus AI, a professional academic assistant. Subject: {subject}. "
-            "Use clear structure, headers, and bullet points. Always respond in Hebrew."
+            "Respond in Hebrew. Use clear structure with headers and bullet points."
         )
         
         full_prompt = f"{system_instruction}\n\n"
@@ -67,15 +49,27 @@ def get_ai_response_stream(subject, prompt, file_context=""):
             full_prompt += f"CONTEXT FROM USER FILES:\n{file_context[:10000]}\n\n"
         full_prompt += f"USER QUESTION: {prompt}"
 
-        # הזרמת תשובה
+        # הפעלת הזרמה (Streaming)
         response = model.generate_content(full_prompt, stream=True)
         
+        has_content = False
         for chunk in response:
-            if chunk.text:
-                yield chunk.text
+            try:
+                if chunk.text:
+                    has_content = True
+                    yield chunk.text
+            except Exception:
+                # לפעמים צ'אנק ספציפי נחסם, אנחנו פשוט ממשיכים לבא בתור
+                continue
+        
+        if not has_content:
+            yield "⚠️ גוגל החזירה תשובה ריקה. נסה לשאול שוב או לנסח אחרת."
 
     except Exception as e:
-        if "429" in str(e):
-            yield "🚨 חריגה ממכסת הודעות. המתן דקה ונסה שוב (המערכת עברה כעת למודל עם מכסה גבוהה יותר)."
+        error_msg = str(e)
+        if "429" in error_msg:
+            yield "🚨 חרגת מהמכסה היומית (Quota). המתן דקה ונסה שוב."
+        elif "API_KEY_INVALID" in error_msg:
+            yield "🚨 מפתח ה-API שלך לא תקין. בדוק את ה-Secrets."
         else:
-            yield f"🚨 שגיאה: {str(e)}"
+            yield f"🚨 שגיאת מערכת: {error_msg}"
