@@ -6,7 +6,6 @@ import PyPDF2
 import docx
 import base64
 
-# פונקציה משודרגת: קוראת PDF, Word וגם צילומי מסך ותמונות!
 def extract_text_from_file(uploaded_file):
     text = ""
     try:
@@ -20,16 +19,15 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs:
                 text += para.text + "\n"
                 
-        # הזיהוי החדש: אם זה תמונה/צילום מסך
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"]
+            # בפענוח תמונות אנחנו קוראים ישירות ל-1.5 היציב
             url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             
             image_bytes = uploaded_file.getvalue()
             encoded_image = base64.b64encode(image_bytes).decode('utf-8')
             mime_type = uploaded_file.type
             
-            # שולחים את התמונה לגוגל כדי שיקרא את הטקסט מתוכה
             payload = {
                 "contents": [{
                     "parts": [
@@ -51,6 +49,7 @@ def extract_text_from_file(uploaded_file):
 def get_ai_response_stream(subject, prompt, file_context=""):
     api_key = st.secrets["GOOGLE_API_KEY"]
     
+    # שלב 1: מציאת המודל - הפעם נועלים על 1.5 כדי לברוח ממגבלת ה-20 הודעות של 2.5
     list_url = f"https://generativelanguage.googleapis.com/v1beta/models?key={api_key}"
     try:
         list_res = requests.get(list_url)
@@ -59,15 +58,14 @@ def get_ai_response_stream(subject, prompt, file_context=""):
             return
             
         models_list = list_res.json().get("models", [])
-        valid_model = None
+        valid_model = "models/gemini-1.5-flash" # ברירת מחדל חזקה
+        
         for m in models_list:
-            if "generateContent" in m.get("supportedGenerationMethods", []):
-                valid_model = m["name"]
-                if "flash" in valid_model:
-                    break
-        if not valid_model:
-            yield "🚨 לא נמצא מודל נתמך."
-            return
+            name = m.get("name", "")
+            # מחפשים בדיוק את 1.5 ולא סתם את המילה flash
+            if "gemini-1.5-flash" in name and "generateContent" in m.get("supportedGenerationMethods", []):
+                valid_model = name
+                break
     except Exception as e:
         yield f"🚨 שגיאה מול גוגל: {e}"
         return
@@ -75,7 +73,6 @@ def get_ai_response_stream(subject, prompt, file_context=""):
     stream_url = f"https://generativelanguage.googleapis.com/v1beta/{valid_model}:streamGenerateContent?alt=sse&key={api_key}"
     headers = {'Content-Type': 'application/json'}
     
-    # --- הזרקת החוקים החדשים שביקשת ישירות למוח של הבוט ---
     system_prompt = f"""You are Nexus AI, an elite academic assistant. Current subject: {subject}.
     CRITICAL INSTRUCTIONS:
     1. Accuracy & Facts: Cross-check your facts. Never invent information (no hallucinations). If you do not know the answer, explicitly state "איני יודע".
@@ -97,7 +94,11 @@ def get_ai_response_stream(subject, prompt, file_context=""):
         res = requests.post(stream_url, headers=headers, json=payload, stream=True)
         res.encoding = 'utf-8' 
         
-        if res.status_code != 200:
+        # טיפול מיוחד בשגיאת עומס
+        if res.status_code == 429:
+            yield "🚨 גוגל חסמו אותנו זמנית בגלל עומס בקשות (Quota Exceeded). המתן כחצי דקה ונסה שוב!"
+            return
+        elif res.status_code != 200:
             yield f"🚨 שגיאה בשרת גוגל: {res.status_code} - {res.text}"
             return
             
