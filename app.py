@@ -15,40 +15,78 @@ T = {
         "title": "NEXUS CORE", "m1": "מרכז בקרה", "m2": "בינה מלאכותית", "m3": "מסד נתונים",
         "avg": "ממוצע ציונים", "count": "רשומות", "status": "מצב חיבור",
         "sub": "מקצוע", "grd": "ציון", "sync": "סנכרן נתונים", "analyst": "מצב דאטה אנליסט 📊",
-        "ask": "איך אני יכול לעזור, מנדי?", "clear": "נקה צ'אט", "subjects": ["כללי", "מתמטיקה", "מדעי המחשב", "סטטיסטיקה"]
+        "ask": "איך אני יכול לעזור, מנדי?", "clear": "נקה צ'אט", 
+        "subjects": ["כללי", "מתמטיקה", "מדעי המחשב", "סטטיסטיקה"]
     },
     "English": {
         "title": "NEXUS CORE", "m1": "Dashboard", "m2": "Nexus AI", "m3": "Database",
         "avg": "Avg Grade", "count": "Records", "status": "System Status",
         "sub": "Subject", "grd": "Grade", "sync": "Sync Data", "analyst": "Analyst Mode 📊",
-        "ask": "How can I help, Mendi?", "clear": "Clear", "subjects": ["General", "Math", "CS", "Statistics"]
+        "ask": "How can I help, Mendi?", "clear": "Clear", 
+        "subjects": ["General", "Math", "CS", "Statistics"]
     }
 }
 cur = T[st.session_state.lang]
 
 st.set_page_config(page_title=cur["title"], layout="wide")
 
-# --- CSS מטורף: Glassmorphism & Neon ---
+# --- CSS מטורף: הצעקה האחרונה (Glassmorphism & Cyber Glow) ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;600;800&family=Orbitron:wght@700&display=swap');
     
     .stApp {{
-        background: radial-gradient(circle at top right, #0a192f, #020c1b);
-        color: #e6f1ff;
+        background: radial-gradient(circle at top right, #050a12, #000000);
+        color: #e0f7fa;
         font-family: 'Assistant', sans-serif;
     }}
+
+    /* יישור טוטאלי לימין עבור עברית */
+    {" .main, [data-testid='stSidebar'], [data-testid='stChatMessageContent'], [data-testid='stChatInput'] { direction: rtl !important; text-align: right !important; } " if st.session_state.lang == "עברית" else ""}
     
-    /* כרטיסיות זכוכית */
-    div[data-testid="stMetric"] {{
-        background: rgba(255, 255, 255, 0.03);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(0, 242, 254, 0.2);
-        border-radius: 20px;
-        padding: 20px;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    /* עיצוב בועות הצ'אט - מראה זכוכית יוקרתי */
+    [data-testid="stChatMessage"] {{
+        background: rgba(255, 255, 255, 0.03) !important;
+        backdrop-filter: blur(12px) !important;
+        border: 1px solid rgba(0, 242, 254, 0.15) !important;
+        border-radius: 20px !important;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.5) !important;
+        margin-bottom: 15px !important;
     }}
-    
+
+    /* תיקון ספציפי לטקסט בתוך הבועה */
+    [data-testid="stChatMessageContent"] p, [data-testid="stChatMessageContent"] li {{
+        direction: rtl !important;
+        text-align: right !important;
+        font-size: 1.1rem !important;
+        line-height: 1.6 !important;
+    }}
+
+    /* כותרות ניאון */
+    h1 {{
+        font-family: 'Orbitron', sans-serif;
+        background: linear-gradient(90deg, #00f2fe, #4facfe);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        text-shadow: 0 0 20px rgba(0, 242, 254, 0.3);
+        text-align: center;
+    }}
+
+    /* כרטיסיות KPI משודרגות */
+    div[data-testid="stMetric"] {{
+        background: linear-gradient(145deg, rgba(0, 242, 254, 0.1), rgba(0, 0, 0, 0.4)) !important;
+        border: 1px solid #00f2fe !important;
+        border-radius: 15px !important;
+        transition: 0.3s;
+    }}
+    div[data-testid="stMetric"]:hover {{ transform: scale(1.03); box-shadow: 0 0 20px rgba(0, 242, 254, 0.2); }}
+
+    /* עיצוב ה-Sidebar */
+    [data-testid="stSidebar"] {{
+        background-color: rgba(5, 10, 15, 0.95) !important;
+        border-left: 1px solid rgba(0, 242, 254, 0.1);
+    }}
+
     /* כפתורי ניאון */
     .stButton>button {{
         background: linear-gradient(90deg, #00f2fe 0%, #4facfe 100%) !important;
@@ -58,30 +96,11 @@ st.markdown(f"""
         border-radius: 12px;
         transition: 0.3s all ease;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        width: 100%;
     }}
     .stButton>button:hover {{
         box-shadow: 0 0 20px #00f2fe;
         transform: translateY(-2px);
-    }}
-
-    /* יישור לימין (RTL) מושלם */
-    {"[data-testid='stSidebar'], .main { direction: rtl; text-align: right; } [data-testid='stChatMessageContent'] { direction: rtl; text-align: right; }" if st.session_state.lang == "עברית" else ""}
-    
-    h1 {{
-        font-family: 'Orbitron', sans-serif;
-        background: linear-gradient(to right, #00f2fe, #bc13fe);
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        font-size: 3.5rem;
-        margin-bottom: 2rem;
-    }}
-    
-    /* עיצוב הצ'אט */
-    .stChatMessage {{
-        background: rgba(255, 255, 255, 0.02);
-        border-radius: 15px;
-        margin-bottom: 10px;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -126,11 +145,11 @@ if menu == cur["m1"]:
             s = st.selectbox(cur["sub"], cur["subjects"])
             g = st.number_input(cur["grd"], 0, 100, 90)
             if st.form_submit_button(cur["sync"]):
-                save_grade(s, "", g); st.rerun()
+                save_grade(s, "", g)
+                st.rerun()
                 
     with col_chart:
         if not df.empty:
-            # גרף מקצועי של דאטה אנליסט
             fig = px.bar(df, x='subject', y='grade', color='grade', 
                          color_continuous_scale='IceFire', template="plotly_dark")
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)')
@@ -145,12 +164,15 @@ elif menu == cur["m2"]:
     
     # מיכל לצ'אט עם גובה קבוע
     chat_container = st.container(height=500)
-    for m in st.session_state.chat_history:
-        with chat_container.chat_message(m["role"]): st.markdown(m["content"])
+    with chat_container:
+        for m in st.session_state.chat_history:
+            with st.chat_message(m["role"]):
+                st.markdown(m["content"])
 
     if p := st.chat_input(cur["ask"]):
         st.session_state.chat_history.append({"role": "user", "content": p})
-        with chat_container.chat_message("user"): st.markdown(p)
+        with chat_container.chat_message("user"):
+            st.markdown(p)
         with chat_container.chat_message("assistant"):
             res = st.write_stream(get_ai_response_stream(chat_sub, p, st.session_state.file_context, st.session_state.lang, analyst_on))
         st.session_state.chat_history.append({"role": "assistant", "content": res})
@@ -159,4 +181,6 @@ elif menu == cur["m2"]:
 elif menu == cur["m3"]:
     st.markdown(f"<h1>{cur['m3']}</h1>", unsafe_allow_html=True)
     st.dataframe(df, use_container_width=True)
-    if st.button("🚨 למחוק את כל המידע?"): clear_db(); st.rerun()
+    if st.button("🚨 למחוק את כל המידע?"): 
+        clear_db()
+        st.rerun()
