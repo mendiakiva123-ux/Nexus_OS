@@ -16,27 +16,31 @@ def extract_text_from_file(uploaded_file):
     return text
 
 def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", analyst_mode=False):
-    # הגדרת המפתח מה-Secrets
+    # הגדרת המפתח והגדרת המודל בנתיב v1 היציב
     api_key = st.secrets["GOOGLE_API_KEY"].strip()
     genai.configure(api_key=api_key)
     
-    # בחירת המודל הכי חזק ומהיר
+    # שימוש במודל היציב ביותר למניעת שגיאות 404
     model = genai.GenerativeModel('gemini-1.5-flash')
     
-    # בניית ההנחיות לבוט
-    role = "Data Analyst Expert" if analyst_mode else "Academic Mentor"
-    instruction = "ענה בעברית בלבד!" if lang == "עברית" else "Respond in English only!"
+    # הגדרת הנחיות המערכת
+    role = "מומחה דאטה אנליסט" if analyst_mode else "מנטור אקדמי"
+    instruct = "ענה בעברית בלבד!" if lang == "עברית" else "Respond in English only!"
     
-    full_prompt = f"System: {role}. {instruction} Subject: {subject}.\n"
+    system_message = f"Role: {role}. Instruction: {instruct}. Subject: {subject}."
     if file_context:
-        full_prompt += f"Study Material: {file_context[:10000]}\n"
-    full_prompt += f"User Question: {prompt}"
+        system_message += f"\nContext: {file_context[:10000]}"
 
     try:
-        # הזרמת התשובה (Streaming)
-        response = model.generate_content(full_prompt, stream=True)
+        # יצירת התשובה
+        response = model.generate_content(f"{system_message}\n\nUser: {prompt}", stream=True)
         for chunk in response:
             if chunk.text:
                 yield chunk.text
     except Exception as e:
-        yield f"🚨 שגיאה בחיבור לגוגל: {str(e)}"
+        # טיפול בשגיאות בצורה ברורה
+        error_msg = str(e)
+        if "404" in error_msg:
+            yield "🚨 שגיאת כתובת (404): המודל לא נמצא. וודא שאתה משתמש בגרסת הספרייה העדכנית ביותר."
+        else:
+            yield f"🚨 שגיאה בחיבור: {error_msg}"
