@@ -35,3 +35,21 @@ def clear_db():
         supabase.table("grades").delete().neq("id", 0).execute()
     except Exception as e:
         st.error(f"שגיאת מחיקה: {e}")
+
+# הוסף את אלו לקובץ הקיים
+def save_chat_message(role, content):
+    try:
+        supabase.table("chat_history").insert({"role": role, "content": content}).execute()
+    except Exception as e:
+        print(f"Error saving chat: {e}")
+
+def get_persistent_chat_history(limit=20):
+    try:
+        # מושך את ההודעות האחרונות כדי לתת לבוט קונטקסט
+        res = supabase.table("chat_history").select("*").order("created_at", desc=False).limit(limit).execute()
+        return res.data
+    except Exception:
+        return []
+
+def clear_chat_history():
+    supabase.table("chat_history").delete().neq("id", 0).execute()
