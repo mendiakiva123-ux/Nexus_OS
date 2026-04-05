@@ -15,52 +15,32 @@ def extract_text_from_file(uploaded_file):
     except: pass
     return text
 
-def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", analyst_mode=False):
-    try:
-        api_key = st.secrets["GOOGLE_API_KEY"].strip()
-        genai.configure(api_key=api_key)
-        
-        # בחירת מודל דינמית למניעת שגיאות כתובת
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        
-        # הגדרת אישיות ה-AI
-        role = "Data Analyst Expert & Statistics Professional" if analyst_mode else "Academic Mentor"
-        instruct = "ענה בעברית בלבד! ישר את הטקסט לימין." if lang == "עברית" else "Respond in English only."
-        
-        full_prompt = f"System: {role}. {instruct} Subject: {subject}.\n"
-        if file_context:
-            full_prompt += f"Context from student files: {file_context[:8000]}\n"
-        full_prompt += f"Question: {prompt}"
-
-        response = model.generate_content(full_prompt, stream=True)
-        for chunk in response:
-            if chunk.text:
-                yield chunk.text
-    except Exception as e:
-        yield f"🚨 שגיאת מערכת: {str(e)}"
-
 def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", lang="עברית", analyst_mode=False):
     try:
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         model = genai.GenerativeModel('gemini-1.5-flash')
         
-        # בניית הזיכרון עבור גוגל
+        # בניית הזיכרון עבור ה-AI (המרה למבנה של גוגל)
         history = []
         for msg in chat_history_list:
-            history.append({"role": "user" if msg["role"] == "user" else "model", 
-                            "parts": [msg["content"]]})
+            role = "user" if msg["role"] == "user" else "model"
+            history.append({"role": role, "parts": [msg["content"]]})
         
-        # הנחיות מערכת (System Instructions)
-        role_type = "Data Analyst Expert" if analyst_mode else "Academic Mentor"
-        sys_instr = f"ענה בעברית מיושרת לימין. תפקיד: {role_type}. נושא: {subject}."
-        if file_context: sys_instr += f"\nמידע מהקבצים: {file_context[:5000]}"
+        # הגדרת תפקיד ושפה
+        role_type = "מומחה דאטה אנליסט וסטטיסטיקה" if analyst_mode else "מנטור אקדמי בכיר"
+        instruct = "ענה בעברית בלבד, ישר הכל לימין (RTL)." if lang == "עברית" else "Respond in English only."
+        
+        system_msg = f"System: {role_type}. {instruct} נושא: {subject}."
+        if file_context:
+            system_msg += f"\nהקשר מהקבצים שנסרקו: {file_context[:8000]}"
 
-        # התחלת צ'אט עם זיכרון
+        # התחלת צ'אט עם הקשר מלא
         chat = model.start_chat(history=history)
-        response = chat.send_message(f"{sys_instr}\n\nשאלה: {prompt}", stream=True)
+        response = chat.send_message(f"{system_msg}\n\nשאלה: {prompt}", stream=True)
         
         for chunk in response:
-            if chunk.text: yield chunk.text
+            if chunk.text:
+                yield chunk.text
     except Exception as e:
-        yield f"🚨 שגיאה: {str(e)}"
+        yield f"🚨 שגיאת תקשורת: {str(e)}"
