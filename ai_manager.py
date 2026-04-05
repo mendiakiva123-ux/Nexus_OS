@@ -16,9 +16,9 @@ def extract_text_from_file(uploaded_file):
             for para in doc.paragraphs: text += para.text + "\n"
         elif uploaded_file.name.lower().endswith(('.png', '.jpg', '.jpeg')):
             api_key = st.secrets["GOOGLE_API_KEY"].strip()
-            url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:generateContent?key={api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={api_key}"
             encoded = base64.b64encode(uploaded_file.getvalue()).decode('utf-8')
-            payload = {"contents": [{"parts": [{"text": "Extract all text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded}}]}]}
+            payload = {"contents": [{"parts": [{"text": "Extract text."}, {"inlineData": {"mimeType": uploaded_file.type, "data": encoded}}]}]}
             res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload)
             if res.status_code == 200:
                 text = res.json()['candidates'][0]['content']['parts'][0].get('text', '')
@@ -27,18 +27,21 @@ def extract_text_from_file(uploaded_file):
 
 def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", analyst_mode=False):
     api_key = st.secrets["GOOGLE_API_KEY"].strip()
-    url = f"https://generativelanguage.googleapis.com/v1/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
+    # שימוש ב-v1beta לתמיכה מקסימלית בהזרמה
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:streamGenerateContent?alt=sse&key={api_key}"
     
-    # הגדרת אישיות הבוט
-    role = "Data Analyst Professional" if analyst_mode else "Academic Expert"
+    headers = {'Content-Type': 'application/json'}
+    
+    # הגדרת אישיות מקצועית
+    role = "Senior Data Analyst & BI Expert" if analyst_mode else "Academic Mentor"
     if lang == "עברית":
-        instruct = f"אתה {role}. ענה בעברית בלבד! אל תשתמש באנגלית. נושא השיחה: {subject}."
+        instruct = f"אתה {role}. ענה בעברית בלבד! אל תשתמש באנגלית. נושא: {subject}."
     else:
         instruct = f"You are {role}. Respond in English only! Subject: {subject}."
 
-    system_prompt = f"{instruct}"
+    system_prompt = instruct
     if file_context:
-        system_prompt += f"\n\nContext from files:\n{file_context[:10000]}"
+        system_prompt += f"\n\nContext from scanned files:\n{file_context[:10000]}"
 
     payload = {
         "contents": [{"parts": [{"text": f"{system_prompt}\n\nUser Question: {prompt}"}]}],
@@ -46,19 +49,22 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", 
     }
 
     try:
-        res = requests.post(url, headers={'Content-Type': 'application/json'}, json=payload, stream=True)
+        res = requests.post(url, headers=headers, json=payload, stream=True)
+        if res.status_code != 200:
+            yield f"🚨 Error {res.status_code}: Check API Key."
+            return
+
         for line in res.iter_lines():
             if line:
                 decoded = line.decode('utf-8')
                 if decoded.startswith("data: "):
                     try:
-                        chunk = json.loads(decoded[6:])
-                        # חילוץ בטוח: בודק שלב שלב שיש טקסט
-                        if 'candidates' in chunk and chunk['candidates']:
-                            cand = chunk['candidates'][0]
-                            if 'content' in cand and 'parts' in cand['content']:
-                                txt = cand['content']['parts'][0].get('text', '')
-                                if txt: yield txt
+                        data_json = json.loads(decoded[6:])
+                        if 'candidates' in data_json and data_json['candidates']:
+                            part = data_json['candidates'][0]['content']['parts'][0]
+                            content = part.get('text', '')
+                            if content: # בדיקה קריטית: רק אם יש תוכן אמיתי
+                                yield content
                     except: continue
     except Exception as e:
-        yield f"🚨 שגיאה: {e}" if lang == "עברית" else f"🚨 Error: {e}"
+        yield f"🚨 Connection Error: {e}"
