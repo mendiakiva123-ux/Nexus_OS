@@ -1,9 +1,8 @@
-google-generativeai==0.8.3
-streamlit==1.32.0
+google-generativeai
+streamlit
 streamlit-option-menu
 pandas
 supabase
 plotly
-PyPDF2
+pypdf2
 python-docx
-Pillow
