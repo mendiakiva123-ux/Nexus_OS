@@ -20,15 +20,23 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", 
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         
-        # פתרון השורש: שימוש במזהה המעודכן ביותר למניעת 404
-        model = genai.GenerativeModel('gemini-1.5-flash-latest')
+        # --- פתרון השורש: בחירת מודל דינמית ---
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         
-        role = "Senior Data Analyst" if analyst_mode else "Academic Mentor"
-        instruct = "ענה בעברית בלבד! אל תשתמש באנגלית." if lang == "עברית" else "Respond in English only."
+        # עדיפות ל-Flash 1.5, אם לא - לוקח את הראשון שזמין
+        model_name = 'models/gemini-1.5-flash'
+        if model_name not in available_models:
+            model_name = next((m for m in available_models if "flash" in m), available_models[0])
         
-        full_prompt = f"Role: {role}. {instruct} Subject: {subject}.\n"
+        model = genai.GenerativeModel(model_name)
+        
+        # הגדרת אישיות
+        role = "Senior Data Analyst Expert" if analyst_mode else "Academic Mentor"
+        instruct = "ענה בעברית בלבד!" if lang == "עברית" else "Respond in English only!"
+        
+        full_prompt = f"System: {role}. {instruct} Subject: {subject}.\n"
         if file_context:
-            full_prompt += f"Context: {file_context[:10000]}\n"
+            full_prompt += f"Context: {file_context[:8000]}\n"
         full_prompt += f"User: {prompt}"
 
         response = model.generate_content(full_prompt, stream=True)
@@ -37,8 +45,4 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", 
                 yield chunk.text
                 
     except Exception as e:
-        error_str = str(e)
-        if "404" in error_str:
-            yield "🚨 שגיאת זיהוי מודל: המערכת מנסה להתחבר למודל חלופי. בצע Refresh לאתר."
-        else:
-            yield f"🚨 שגיאה בחיבור: {error_str}"
+        yield f"🚨 שגיאת בינה מלאכותית: {str(e)}"
