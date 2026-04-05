@@ -1,9 +1,8 @@
+google-generativeai
 streamlit
 streamlit-option-menu
 pandas
-plotly
-requests
+supabase
 PyPDF2
 python-docx
 Pillow
-supabase
