@@ -1,35 +1,29 @@
-import sqlite3
+import streamlit as st
+from supabase import create_client, Client
 import pandas as pd
 
-DB_NAME = "nexus_vault.db"
+# חיבור לסופאבייס דרך ה-Secrets
+url: str = st.secrets["SUPABASE_URL"]
+key: str = st.secrets["SUPABASE_KEY"]
+supabase: Client = create_client(url, key)
 
 def init_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS grades 
-                      (id INTEGER PRIMARY KEY AUTOINCREMENT, subject TEXT, topic TEXT, 
-                       grade REAL, date TEXT, notes TEXT)''')
-    conn.commit()
-    conn.close()
+    # בסופאבייס אנחנו יוצרים את הטבלה דרך ה-SQL Editor באתר שלהם (הסבר למטה)
+    pass
 
 def save_grade(subject, topic, grade, notes=""):
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    date_now = pd.Timestamp.now().strftime("%Y-%m-%d %H:%M")
-    cursor.execute("INSERT INTO grades (subject, topic, grade, date, notes) VALUES (?, ?, ?, ?, ?)",
-                   (subject, topic, grade, date_now, notes))
-    conn.commit()
-    conn.close()
+    data = {
+        "subject": subject,
+        "topic": topic,
+        "grade": grade,
+        "notes": notes
+    }
+    supabase.table("grades").insert(data).execute()
 
 def get_all_grades():
-    conn = sqlite3.connect(DB_NAME)
-    df = pd.read_sql_query("SELECT * FROM grades", conn)
-    conn.close()
-    return df
+    response = supabase.table("grades").select("*").execute()
+    return pd.DataFrame(response.data)
 
 def clear_db():
-    conn = sqlite3.connect(DB_NAME)
-    cursor = conn.cursor()
-    cursor.execute("DELETE FROM grades")
-    conn.commit()
-    conn.close()
+    # פקודה זו תמחק הכל - להשתמש בזהירות
+    supabase.table("grades").delete().neq("id", 0).execute()
