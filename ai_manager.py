@@ -20,18 +20,16 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", 
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         
-        # פתרון השורש: מציאת המודל המתאים ביותר שזמין בחשבון שלך
-        model_name = 'gemini-1.5-flash'
-        model = genai.GenerativeModel(model_name=model_name)
+        # פתרון השורש: שימוש במזהה המעודכן ביותר למניעת 404
+        model = genai.GenerativeModel('gemini-1.5-flash-latest')
         
-        # הגדרת אישיות
         role = "Senior Data Analyst" if analyst_mode else "Academic Mentor"
         instruct = "ענה בעברית בלבד! אל תשתמש באנגלית." if lang == "עברית" else "Respond in English only."
         
-        full_prompt = f"System: {role}. {instruct} Subject: {subject}.\n"
+        full_prompt = f"Role: {role}. {instruct} Subject: {subject}.\n"
         if file_context:
             full_prompt += f"Context: {file_context[:10000]}\n"
-        full_prompt += f"Question: {prompt}"
+        full_prompt += f"User: {prompt}"
 
         response = model.generate_content(full_prompt, stream=True)
         for chunk in response:
@@ -39,8 +37,8 @@ def get_ai_response_stream(subject, prompt, file_context="", lang="עברית", 
                 yield chunk.text
                 
     except Exception as e:
-        error_msg = str(e)
-        if "404" in error_msg:
-            yield "🚨 שגיאת כתובת: גוגל שינתה את המודל. נסה לבצע Reboot לאפליקציה ב-Streamlit Cloud."
+        error_str = str(e)
+        if "404" in error_str:
+            yield "🚨 שגיאת זיהוי מודל: המערכת מנסה להתחבר למודל חלופי. בצע Refresh לאתר."
         else:
-            yield f"🚨 שגיאת בינה מלאכותית: {error_msg}"
+            yield f"🚨 שגיאה בחיבור: {error_str}"
