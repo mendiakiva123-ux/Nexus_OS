@@ -3,6 +3,7 @@ streamlit
 streamlit-option-menu
 pandas
 supabase
+plotly
 PyPDF2
 python-docx
 Pillow
