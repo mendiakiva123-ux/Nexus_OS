@@ -22,7 +22,11 @@ def get_all_grades():
         return pd.DataFrame(columns=["id", "subject", "topic", "grade", "credits", "created_at"])
 
 def clear_db():
-    supabase.table("grades").delete().neq("id", 0).execute()
+    try:
+        # שיטה בטוחה למחיקה - מוחק הכל איפה שה-ID גדול מ-0
+        supabase.table("grades").delete().gt("id", 0).execute()
+    except Exception as e:
+        print(f"Error clearing db: {e}")
 
 # --- ניהול זיכרון צ'אט ---
 def save_chat_message(role, content):
@@ -37,4 +41,8 @@ def get_persistent_chat_history(limit=25):
     except: return []
 
 def clear_chat_history():
-    supabase.table("chat_history").delete().neq("id", 0).execute()
+    try:
+        # שיטה בטוחה למחיקה - מוחק הכל איפה שה-ID גדול מ-0
+        supabase.table("chat_history").delete().gt("id", 0).execute()
+    except Exception as e:
+        print(f"Error clearing chat: {e}")
