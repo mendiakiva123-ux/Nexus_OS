@@ -14,7 +14,6 @@ if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    # עיצוב מיוחד למסך הנעילה
     st.markdown("""
         <style>
         .stApp {
@@ -44,7 +43,7 @@ if not st.session_state.authenticated:
         st.markdown("<h1 style='color:white; text-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size:3rem;'>NEXUS OS</h1>", unsafe_allow_html=True)
         st.markdown("<p style='color:white; font-size:1.2rem;'>הכנס קוד גישה מאובטח</p>", unsafe_allow_html=True)
         
-        # JS להקפצת מקלדת מספרים במובייל
+        # הקפצת מקלדת מספרים במובייל
         components.html("""
         <script>
             setTimeout(function() {
@@ -57,7 +56,7 @@ if not st.session_state.authenticated:
         </script>
         """, height=0)
 
-        pwd = st.text_input("", type="password", placeholder="****")
+        pwd = st.text_input("", type="password", placeholder="****", label_visibility="collapsed")
         if st.button("התחברות למערכת 🚀"):
             if pwd == "7707":
                 st.session_state.authenticated = True
@@ -65,7 +64,7 @@ if not st.session_state.authenticated:
             else:
                 st.error("קוד שגוי. נסה שוב.")
         st.markdown("</div>", unsafe_allow_html=True)
-    st.stop() # עוצר את שאר האפליקציה עד שהקוד נכון
+    st.stop()
 
 # ==========================================
 # --- מכאן מתחילה האפליקציה (אחרי התחברות) ---
@@ -74,21 +73,19 @@ if not st.session_state.authenticated:
 # אתחול משתני Session State
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
-if 'file_context' not in st.session_state: st.session_state.file_context = ""
+if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {} # מילון לשמירת קבצים לפי מקצוע
 if 'font_size' not in st.session_state: st.session_state.font_size = "1.1rem" 
 
 T = {
     "עברית": {
         "title": "NEXUS ACADEMY", "m1": "מרכז אקדמי", "m2": "מנטור AI", "m3": "מסד נתונים", "m4": "הגדרות",
         "avg": "ממוצע משוקלל", "count": "קורסים", "sub": "מקצוע", "grd": "ציון", "cred": "נ\"ז", "sync": "הזן ציון",
-        "analyst": "מצב דאטה אנליסט 📊", "ask": "הזן שאלה...", "clear": "נקה זיכרון",
-        "subjects": ["מבוא למדעי המחשב", "מתמטיקה", "סטטיסטיקה א'", "מערכות מידע", "פייתון", "אחר"]
+        "analyst": "מצב דאטה אנליסט 📊", "ask": "הזן שאלה...", "clear": "נקה זיכרון"
     },
     "English": {
         "title": "NEXUS ACADEMY", "m1": "Dashboard", "m2": "AI Mentor", "m3": "Vault", "m4": "Settings",
         "avg": "Weighted GPA", "count": "Courses", "sub": "Subject", "grd": "Grade", "cred": "Credits", "sync": "Save",
-        "analyst": "Analyst Mode 📊", "ask": "Message...", "clear": "Clear Memory",
-        "subjects": ["CS Intro", "Math", "Statistics", "IS", "Python", "Other"]
+        "analyst": "Analyst Mode 📊", "ask": "Message...", "clear": "Clear Memory"
     }
 }
 cur = T[st.session_state.lang]
@@ -103,16 +100,13 @@ st.markdown(f"""
     footer {{visibility: hidden !important;}}
     html, body {{ max-width: 100vw; overflow-x: hidden; }}
     
-    /* רקע חי ונושם */
     .stApp {{ 
         background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
         color: #2c3e50; font-family: 'Assistant', sans-serif; 
     }}
     
-    /* יישור לימין (RTL) */
     {" .main, [data-testid='stSidebar'], [data-testid='stChatMessageContent'] { direction: rtl !important; text-align: right !important; } " if st.session_state.lang == "עברית" else ""}
 
-    /* עיצוב 3D וזכוכית לכרטיסיות ולצ'אט */
     div[data-testid="stMetric"], .stChatMessage, .stForm {{
         background: rgba(255, 255, 255, 0.4) !important;
         backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
@@ -128,7 +122,6 @@ st.markdown(f"""
     
     h1 {{ color: #1e3c72; text-align: center; font-weight: 800; text-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
     
-    /* כפתורי 3D צבעוניים וקופצים */
     .stButton>button {{
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
         color: white !important; font-weight: 800; border: none; border-radius: 50px !important; width: 100%;
@@ -150,17 +143,43 @@ st.markdown(f"""
 def fetch_grades_cached():
     return get_all_grades()
 
-# --- תפריט צד (רק לכלים והגדרות צדדיות) ---
+df = fetch_grades_cached()
+
+# --- מנגנון המקצועות הדינמי ---
+base_subjects = ["מתמטיקה", "אנגלית", "פיזיקה", "כתיבה אקדמית"]
+db_subjects = df['subject'].unique().tolist() if not df.empty else []
+# איחוד הרשימות ללא כפילויות
+all_subjects = sorted(list(set(base_subjects + db_subjects)))
+
+# --- תפריט צד (ניהול מקצועות, העלאת קבצים) ---
 with st.sidebar:
     st.markdown(f"<h2 style='color:#1e3c72; text-align:center;'>NEXUS OS</h2>", unsafe_allow_html=True)
     lang = st.radio("שפת ממשק", ["עברית", "English"], horizontal=True, label_visibility="collapsed")
     if lang != st.session_state.lang: st.session_state.lang = lang; st.rerun()
     st.divider()
     analyst_on = st.toggle(cur["analyst"], value=True)
-    st.markdown("### 📁 חומרי עזר")
+    
+    st.markdown("### 📚 ניהול חומר לימודי")
+    
+    # 1. הוספת מקצוע חדש
+    with st.expander("➕ הוסף מקצוע חדש למערכת"):
+        new_sub = st.text_input("שם המקצוע:")
+        if st.button("שמור מקצוע"):
+            if new_sub and new_sub not in all_subjects:
+                # שומר רשומה נסתרת ב-DB כדי שהמערכת תזכור את המקצוע לתמיד
+                save_grade(new_sub, "System_Init", 0, 0) 
+                fetch_grades_cached.clear()
+                st.rerun()
+                
+    st.divider()
+    
+    # 2. העלאת קבצים למקצוע ספציפי
+    upload_sub = st.selectbox("בחר מקצוע עבור הקובץ:", all_subjects)
     up = st.file_uploader("סריקת PDF/DOCX", type=['pdf', 'docx'])
     if up and st.button("סרוק לזיכרון הבוט"):
-        st.session_state.file_context = extract_text_from_file(up); st.success("המידע נטען בהצלחה")
+        # שומר את הטקסט תחת המקצוע הספציפי
+        st.session_state.file_contexts[upload_sub] = extract_text_from_file(up)
+        st.success(f"המידע נטען ושויך למקצוע: {upload_sub}")
 
 # --- תפריט ניווט עליון צף ---
 menu = option_menu(None, [cur["m1"], cur["m2"], cur["m3"], cur["m4"]], 
@@ -171,12 +190,13 @@ menu = option_menu(None, [cur["m1"], cur["m2"], cur["m3"], cur["m4"]],
                        "nav-link-selected": {"background": "linear-gradient(135deg, #667eea, #764ba2)", "font-weight": "bold", "color": "white", "border-radius": "15px"}
                    })
 
-df = fetch_grades_cached()
+# סינון נתוני מערכת נסתרים (כדי שלא ישפיעו על ממוצע/גרפים)
+df_valid = df[df['topic'] != 'System_Init'] if not df.empty else df
 
-if not df.empty:
-    if 'credits' not in df.columns: df['credits'] = 1.0
-    total_credits = df['credits'].sum()
-    weighted_avg = (df['grade'] * df['credits']).sum() / total_credits if total_credits > 0 else 0
+if not df_valid.empty:
+    if 'credits' not in df_valid.columns: df_valid['credits'] = 1.0
+    total_credits = df_valid['credits'].sum()
+    weighted_avg = (df_valid['grade'] * df_valid['credits']).sum() / total_credits if total_credits > 0 else 0
 else:
     weighted_avg = 0.0
 
@@ -186,8 +206,8 @@ if menu == cur["m1"]:
     
     c1, c2, c3 = st.columns(3)
     c1.metric(cur["avg"], f"{weighted_avg:.2f}") 
-    c2.metric(cur["count"], len(df))
-    total_cred_display = df['credits'].sum() if not df.empty else 0
+    c2.metric(cur["count"], len(df_valid))
+    total_cred_display = df_valid['credits'].sum() if not df_valid.empty else 0
     c3.metric("סה\"כ נ\"ז לתואר", f"{total_cred_display:.1f}")
     
     st.divider()
@@ -195,7 +215,7 @@ if menu == cur["m1"]:
     with l:
         st.markdown("### 📥 הזנת קורס חדש")
         with st.form("entry", clear_on_submit=True):
-            s = st.selectbox(cur["sub"], cur["subjects"])
+            s = st.selectbox(cur["sub"], all_subjects) # מסונכרן עם כל המקצועות!
             c = st.number_input(cur["cred"], min_value=0.5, max_value=10.0, value=3.0, step=0.5)
             g = st.number_input(cur["grd"], min_value=0, max_value=100, value=90)
             if st.form_submit_button(cur["sync"]): 
@@ -203,8 +223,8 @@ if menu == cur["m1"]:
                 fetch_grades_cached.clear()
                 st.rerun()
     with r:
-        if not df.empty:
-            fig = px.bar(df, x='subject', y='grade', color='grade', color_continuous_scale='Purp', title="הישגים לפי מקצועות")
+        if not df_valid.empty:
+            fig = px.bar(df_valid, x='subject', y='grade', color='grade', color_continuous_scale='Purp', title="הישגים לפי מקצועות")
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="#1e3c72")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -216,7 +236,8 @@ elif menu == cur["m2"]:
         db_history = get_persistent_chat_history()
         st.session_state.chat_history = [{"role": m["role"], "content": m["content"]} for m in db_history]
 
-    chat_sub = st.selectbox(cur["sub"], cur["subjects"], index=0, label_visibility="collapsed")
+    # בחירת מקצוע לשיחה - מסונכרן עם הכל!
+    chat_sub = st.selectbox("נושא השיחה (הבוט ייגש לקבצים של מקצוע זה):", all_subjects, index=0)
     
     chat_container = st.container(height=500)
     with chat_container:
@@ -225,7 +246,7 @@ elif menu == cur["m2"]:
                 st.markdown(f'<div style="text-align: right; direction: rtl;">{m["content"]}</div>', unsafe_allow_html=True)
 
     if p := st.chat_input(cur["ask"]):
-        # 2. פתרון המקלדת במובייל! הקוד הזה מכווץ את המקלדת ברגע שלוחצים 'שלח'
+        # מעלים את המקלדת מיד עם השליחה במובייל
         components.html("""<script>window.parent.document.activeElement.blur();</script>""", height=0, width=0)
         
         st.session_state.chat_history.append({"role": "user", "content": p})
@@ -236,7 +257,10 @@ elif menu == cur["m2"]:
         with chat_container.chat_message("assistant"):
             placeholder = st.empty()
             full_res = ""
-            for chunk in get_ai_response_stream(chat_sub, p, st.session_state.chat_history[:-1], st.session_state.file_context, st.session_state.lang, analyst_on):
+            # שולף את הטקסט הספציפי שנסרק למקצוע הזה!
+            context_for_bot = st.session_state.file_contexts.get(chat_sub, "")
+            
+            for chunk in get_ai_response_stream(chat_sub, p, st.session_state.chat_history[:-1], context_for_bot, st.session_state.lang, analyst_on):
                 full_res += chunk
                 placeholder.markdown(f'<div style="text-align: right; direction: rtl;">{full_res}</div>', unsafe_allow_html=True)
         
@@ -246,7 +270,7 @@ elif menu == cur["m2"]:
 # --- עמוד: מסד נתונים ---
 elif menu == cur["m3"]:
     st.markdown(f"<h1>{cur['m3']}</h1>", unsafe_allow_html=True)
-    st.dataframe(df, use_container_width=True, height=500)
+    st.dataframe(df_valid, use_container_width=True, height=500) # מציג רק את הציונים האמיתיים
 
 # --- עמוד: הגדרות (Settings) ---
 elif menu == cur["m4"]:
@@ -269,7 +293,7 @@ elif menu == cur["m4"]:
     with c2:
         st.markdown("מחיקת קבצים.")
         if st.button("רוקן זיכרון סורק", type="primary"):
-            st.session_state.file_context = ""; st.success("נוקה.")
+            st.session_state.file_contexts = {}; st.success("נוקה.")
     with c3:
         st.markdown("איפוס ציונים מלא.")
         st.markdown("""<style>div.row-widget.stButton > button[kind="secondary"] {background: linear-gradient(135deg, #ff416c, #ff4b2b) !important; color: white !important;}</style>""", unsafe_allow_html=True)
