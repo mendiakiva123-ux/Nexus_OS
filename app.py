@@ -3,7 +3,6 @@ import streamlit.components.v1 as components
 from streamlit_option_menu import option_menu
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import datetime
 from zoneinfo import ZoneInfo
 import io
@@ -54,9 +53,22 @@ def get_greeting():
     else: return "לילה טוב"
 greeting_text = f"{get_greeting()}, מנדי עקיבא! ✨"
 
-cur = {"m1": "מרכז אקדמי", "m2": "מנטור AI", "m3": "מסד נתונים", "m4": "לוח משימות 📅", "m5": "הגדרות"}
+# מילון השפות שהוחזר
+T = {
+    "עברית": {
+        "title": "NEXUS ACADEMY", "m1": "מרכז אקדמי", "m2": "מנטור AI", "m3": "מסד נתונים", "m4": "לוח משימות 📅", "m5": "הגדרות",
+        "avg": "ממוצע משוקלל", "count": "קורסים", "sub": "מקצוע", "grd": "ציון", "cred": "נ\"ז", "sync": "שמור נתונים",
+        "analyst": "מצב דאטה אנליסט 📊", "ask": "שאל את הבוט...", "clear": "נקה זיכרון"
+    },
+    "English": {
+        "title": "NEXUS ACADEMY", "m1": "Dashboard", "m2": "AI Mentor", "m3": "Vault", "m4": "Task Board 📅", "m5": "Settings",
+        "avg": "Weighted GPA", "count": "Courses", "sub": "Subject", "grd": "Grade", "cred": "Credits", "sync": "Save",
+        "analyst": "Analyst Mode 📊", "ask": "Ask NEXUS...", "clear": "Clear Memory"
+    }
+}
+cur = T[st.session_state.lang]
 
-# --- עיצוב דינמי (תומך Dark Mode בעתיד) ---
+# --- עיצוב דינמי (תומך Dark Mode) ---
 bg_css = "background: radial-gradient(circle at 15% 50%, #fdfbfb, #ebedee), radial-gradient(circle at 85% 30%, #e0c3fc, #8ec5fc);" if not st.session_state.dark_mode else "background: #0f2027; background: -webkit-linear-gradient(to right, #2c5364, #203a43, #0f2027); background: linear-gradient(to right, #2c5364, #203a43, #0f2027);"
 text_color = "#2c3e50" if not st.session_state.dark_mode else "#ffffff"
 glass_bg = "rgba(255, 255, 255, 0.55)" if not st.session_state.dark_mode else "rgba(0, 0, 0, 0.4)"
@@ -67,7 +79,7 @@ st.markdown(f"""
     header[data-testid="stHeader"] {{ background: transparent !important; }}
     .stAppDeployButton {{display: none;}} footer {{visibility: hidden !important;}} html, body {{ max-width: 100vw; overflow-x: hidden; }}
     .stApp {{ {bg_css} color: {text_color}; font-family: 'Assistant', sans-serif; }}
-    .main, [data-testid='stSidebar'], [data-testid='stChatMessageContent'] {{ direction: rtl !important; text-align: right !important; }}
+    {" .main, [data-testid='stSidebar'], [data-testid='stChatMessageContent'] { direction: rtl !important; text-align: right !important; } " if st.session_state.lang == "עברית" else ""}
     div[data-testid="stMetric"], .stChatMessage, .stForm {{ background: {glass_bg} !important; backdrop-filter: blur(20px) !important; border: 1px solid rgba(255, 255, 255, 0.3) !important; border-radius: 20px !important; box-shadow: 0 8px 32px rgba(0,0,0, 0.1) !important; padding: 15px; transition: transform 0.3s, box-shadow 0.3s; color: {text_color} !important; }}
     div[data-testid="stMetric"]:hover {{ transform: translateY(-8px); box-shadow: 0 15px 35px rgba(0,0,0, 0.2) !important; }}
     h1, h2, h3 {{ color: {text_color}; text-align: center; font-weight: 800; }}
@@ -99,15 +111,23 @@ idx_general = all_subjects.index("כללי") if "כללי" in all_subjects else 
 # --- תפריט צד ---
 with st.sidebar:
     st.markdown(f"<h2>NEXUS OS</h2>", unsafe_allow_html=True)
-    st.session_state.dark_mode = st.toggle("🌙 מצב לילה", value=st.session_state.dark_mode)
+    
+    # החזרת אפשרות השפה
+    lang = st.radio("שפת ממשק / Language", ["עברית", "English"], horizontal=True, label_visibility="collapsed")
+    if lang != st.session_state.lang: st.session_state.lang = lang; st.rerun()
+    
+    st.session_state.dark_mode = st.toggle("🌙 מצב לילה" if st.session_state.lang == "עברית" else "🌙 Dark Mode", value=st.session_state.dark_mode)
     st.divider()
-    analyst_on = st.toggle("מצב דאטה אנליסט 📊", value=True)
-    st.markdown("### 📚 ניהול חומר לימודי")
-    upload_sub = st.selectbox("שייך קובץ למקצוע:", all_subjects[:-1], index=idx_math)
-    up = st.file_uploader("העלאת קבצים (כל הסוגים)", type=None)
-    if up and st.button("סרוק לזיכרון הבוט"):
+    
+    # החזרת מצב האנליסט
+    analyst_on = st.toggle(cur["analyst"], value=True)
+    
+    st.markdown("### 📚 ניהול חומר לימודי" if st.session_state.lang == "עברית" else "### 📚 Study Materials")
+    upload_sub = st.selectbox("שייך קובץ למקצוע:" if st.session_state.lang == "עברית" else "Assign to subject:", all_subjects[:-1], index=idx_math)
+    up = st.file_uploader("העלאת קבצים (כל הסוגים)" if st.session_state.lang == "עברית" else "Upload files", type=None)
+    if up and st.button("סרוק לזיכרון הבוט" if st.session_state.lang == "עברית" else "Scan to Memory"):
         st.session_state.file_contexts[upload_sub] = extract_text_from_file(up)
-        st.success(f"המידע נטען למקצוע: {upload_sub}")
+        st.success(f"המידע נטען למקצוע: {upload_sub}" if st.session_state.lang == "עברית" else f"Loaded to: {upload_sub}")
 
 st.markdown(f"<div class='greeting-box'>{greeting_text}</div>", unsafe_allow_html=True)
 
@@ -120,47 +140,51 @@ menu = option_menu(None, [cur["m1"], cur["m2"], cur["m3"], cur["m4"], cur["m5"]]
                    })
 
 df_valid = df[df['topic'] != 'System_Init'] if not df.empty else df
+
+# --- התיקון הקריטי לשגיאת ה-NameError ---
+total_credits = 0.0
+weighted_avg = 0.0
+
 if not df_valid.empty:
     if 'credits' not in df_valid.columns: df_valid['credits'] = 1.0
     total_credits = df_valid['credits'].sum()
-    weighted_avg = (df_valid['grade'] * df_valid['credits']).sum() / total_credits if total_credits > 0 else 0
-else:
-    weighted_avg = 0.0
+    if total_credits > 0:
+        weighted_avg = (df_valid['grade'] * df_valid['credits']).sum() / total_credits
 
-# --- עמוד: מרכז אקדמי (הדשבורד שודרג) ---
+# --- עמוד: מרכז אקדמי (הדשבורד) ---
 if menu == cur["m1"]:
     c1, c2, c3 = st.columns(3)
-    c1.metric("ממוצע משוקלל", f"{weighted_avg:.2f}") 
-    c2.metric("קורסים", len(df_valid))
-    c3.metric("סה\"כ נ\"ז", f"{total_credits:.1f}")
+    c1.metric(cur["avg"], f"{weighted_avg:.2f}") 
+    c2.metric(cur["count"], len(df_valid))
+    c3.metric("סה\"כ נ\"ז" if st.session_state.lang == "עברית" else "Total Credits", f"{total_credits:.1f}")
     
     st.divider()
     l, r = st.columns([1, 2.5])
     with l:
-        st.markdown("### 📥 הזנת קורס חדש")
+        st.markdown("### 📥 הזנת קורס חדש" if st.session_state.lang == "עברית" else "### 📥 Enter Course")
         with st.form("entry", clear_on_submit=True):
-            selected_sub = st.selectbox("מקצוע", all_subjects, index=idx_math)
+            selected_sub = st.selectbox(cur["sub"], all_subjects, index=idx_math)
             new_sub_input = st.text_input("הקלד שם מקצוע חדש:") if selected_sub == "➕ הוסף מקצוע חדש..." else ""
-            c = st.number_input("נ\"ז", min_value=0.5, max_value=10.0, value=3.0, step=0.5)
-            g = st.number_input("ציון", min_value=0, max_value=100, value=90)
-            if st.form_submit_button("שמור"): 
+            c = st.number_input(cur["cred"], min_value=0.5, max_value=10.0, value=3.0, step=0.5)
+            g = st.number_input(cur["grd"], min_value=0, max_value=100, value=90)
+            if st.form_submit_button(cur["sync"]): 
                 final_subject = new_sub_input if selected_sub == "➕ הוסף מקצוע חדש..." else selected_sub
                 if final_subject: save_grade(final_subject, "", g, c); fetch_grades_cached.clear(); st.rerun()
-                else: st.error("חובה להזין שם.")
+                else: st.error("חובה להזין שם." if st.session_state.lang == "עברית" else "Name required.")
                 
         # מחשבון מה אם
-        with st.expander("🤔 מחשבון 'מה אם'"):
-            st.markdown("בדוק איך ציון ישפיע על הממוצע:")
-            sim_c = st.number_input("נ\"ז לקורס הבא", 1.0, 10.0, 3.0)
-            sim_g = st.number_input("ציון צפוי", 0, 100, 90)
-            if st.button("חשב"):
+        with st.expander("🤔 מחשבון 'מה אם'" if st.session_state.lang == "עברית" else "🤔 What-If Calculator"):
+            st.markdown("בדוק איך ציון ישפיע על הממוצע:" if st.session_state.lang == "עברית" else "Check future grade impact:")
+            sim_c = st.number_input("נ\"ז לקורס הבא" if st.session_state.lang == "עברית" else "Next course credits", 1.0, 10.0, 3.0)
+            sim_g = st.number_input("ציון צפוי" if st.session_state.lang == "עברית" else "Expected grade", 0, 100, 90)
+            if st.button("חשב" if st.session_state.lang == "עברית" else "Calculate"):
                 new_tot = total_credits + sim_c
-                new_avg = ((weighted_avg * total_credits) + (sim_g * sim_c)) / new_tot
-                st.success(f"הממוצע יהיה: {new_avg:.2f}")
+                new_avg = ((weighted_avg * total_credits) + (sim_g * sim_c)) / new_tot if new_tot > 0 else 0
+                st.success(f"הממוצע יהיה: {new_avg:.2f}" if st.session_state.lang == "עברית" else f"New Avg: {new_avg:.2f}")
 
     with r:
         if not df_valid.empty:
-            tab1, tab2, tab3 = st.tabs(["גרף ציונים", "עוגת נ\"ז", "מגמת זמן"])
+            tab1, tab2, tab3 = st.tabs(["גרף ציונים", "עוגת נ\"ז", "מגמת זמן"] if st.session_state.lang == "עברית" else ["Grades Chart", "Credits Pie", "Trend"])
             with tab1:
                 fig = px.bar(df_valid, x='subject', y='grade', color='grade', color_continuous_scale='Mint')
                 fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=text_color)
@@ -170,14 +194,13 @@ if menu == cur["m1"]:
                 fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color=text_color)
                 st.plotly_chart(fig2, use_container_width=True)
             with tab3:
-                # גרף מגמה לפי תאריך
                 df_time = df_valid.copy().sort_values('created_at')
                 df_time['rolling_avg'] = df_time['grade'].expanding().mean()
-                fig3 = px.line(df_time, x='created_at', y='rolling_avg', markers=True, title="התפתחות ממוצע לאורך זמן")
+                fig3 = px.line(df_time, x='created_at', y='rolling_avg', markers=True)
                 fig3.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=text_color)
                 st.plotly_chart(fig3, use_container_width=True)
 
-# --- עמוד: בינה מלאכותית (כולל מחולל בחנים) ---
+# --- עמוד: בינה מלאכותית ---
 elif menu == cur["m2"]:
     st.markdown(f"<h1>{'NEXUS AI MENTOR' if not analyst_on else 'DATA ANALYST AI'}</h1>", unsafe_allow_html=True)
     if not st.session_state.chat_history:
@@ -185,18 +208,18 @@ elif menu == cur["m2"]:
         st.session_state.chat_history = [{"role": m["role"], "content": m["content"]} for m in db_history]
 
     colA, colB = st.columns([3, 1])
-    with colA: chat_sub = st.selectbox("נושא השיחה:", all_subjects[:-1], index=idx_general)
+    with colA: chat_sub = st.selectbox("נושא השיחה:" if st.session_state.lang == "עברית" else "Subject:", all_subjects[:-1], index=idx_general)
     with colB: 
-        if st.button("📝 חולל מבחן (Quiz)"):
+        if st.button("📝 חולל מבחן (Quiz)" if st.session_state.lang == "עברית" else "📝 Generate Quiz"):
             if chat_sub in st.session_state.file_contexts:
                 context_for_bot = st.session_state.file_contexts[chat_sub]
                 placeholder = st.empty()
                 full_res = ""
-                for chunk in get_ai_response_stream(chat_sub, "ייצר לי מבחן.", [], context_for_bot, st.session_state.lang, analyst_on, is_quiz=True):
+                for chunk in get_ai_response_stream(chat_sub, "ייצר לי מבחן." if st.session_state.lang == "עברית" else "Generate a quiz.", [], context_for_bot, st.session_state.lang, analyst_on, is_quiz=True):
                     full_res += chunk
-                    placeholder.markdown(f'<div style="text-align: right; direction: rtl; background: rgba(255,255,255,0.8); padding:15px; border-radius:10px;">{full_res}</div>', unsafe_allow_html=True)
+                    placeholder.markdown(f'<div style="text-align: right; direction: rtl; background: rgba(255,255,255,0.8); padding:15px; border-radius:10px; color: black;">{full_res}</div>', unsafe_allow_html=True)
             else:
-                st.warning("עליך להעלות קבצים למקצוע זה תחילה.")
+                st.warning("עליך להעלות קבצים למקצוע זה תחילה." if st.session_state.lang == "עברית" else "Upload files for this subject first.")
 
     chat_container = st.container(height=450)
     with chat_container:
@@ -204,7 +227,7 @@ elif menu == cur["m2"]:
             with st.chat_message(m["role"]):
                 st.markdown(f'<div style="text-align: right; direction: rtl;">{m["content"]}</div>', unsafe_allow_html=True)
 
-    if p := st.chat_input("שאל את NEXUS..."):
+    if p := st.chat_input(cur["ask"]):
         components.html("""<script>window.parent.document.activeElement.blur();</script>""", height=0, width=0)
         st.session_state.chat_history.append({"role": "user", "content": p})
         save_chat_message("user", p)
@@ -225,24 +248,23 @@ elif menu == cur["m3"]:
     col1, col2 = st.columns([3, 1])
     with col1: st.markdown("<h1>Vault</h1>", unsafe_allow_html=True)
     with col2:
-        # כפתור הורדה לאקסל
         if not df_valid.empty:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer:
                 df_valid.to_excel(writer, index=False, sheet_name='Grades')
-            st.download_button(label="📥 ייצוא ל-Excel", data=buffer.getvalue(), file_name="Nexus_Grades.xlsx", mime="application/vnd.ms-excel")
+            st.download_button(label="📥 ייצוא ל-Excel" if st.session_state.lang == "עברית" else "📥 Export Excel", data=buffer.getvalue(), file_name="Nexus_Grades.xlsx", mime="application/vnd.ms-excel")
     st.dataframe(df_valid, use_container_width=True, height=500) 
 
-# --- עמוד חדש: לוח משימות ---
+# --- עמוד: לוח משימות ---
 elif menu == cur["m4"]:
-    st.markdown("<h1>לוח משימות אקדמי</h1>", unsafe_allow_html=True)
+    st.markdown("<h1>לוח משימות אקדמי</h1>" if st.session_state.lang == "עברית" else "<h1>Task Board</h1>", unsafe_allow_html=True)
     colA, colB = st.columns([1, 2])
     with colA:
         with st.form("new_task", clear_on_submit=True):
-            t_title = st.text_input("תיאור המשימה (לדוג: 'להגיש מטלה 2')")
-            t_sub = st.selectbox("מקצוע", all_subjects[:-1])
-            t_date = st.date_input("תאריך הגשה")
-            if st.form_submit_button("הוסף משימה"):
+            t_title = st.text_input("תיאור המשימה" if st.session_state.lang == "עברית" else "Task Title")
+            t_sub = st.selectbox(cur["sub"], all_subjects[:-1])
+            t_date = st.date_input("תאריך הגשה" if st.session_state.lang == "עברית" else "Due Date")
+            if st.form_submit_button("הוסף משימה" if st.session_state.lang == "עברית" else "Add Task"):
                 save_task(t_title, t_sub, t_date); fetch_tasks_cached.clear(); st.rerun()
     with colB:
         if not tasks_df.empty:
@@ -250,27 +272,32 @@ elif menu == cur["m4"]:
                 with st.container():
                     cols = st.columns([4, 1])
                     days_left = (pd.to_datetime(row['due_date']).date() - datetime.date.today()).days
-                    status_color = "red" if days_left < 3 else "green"
-                    cols[0].markdown(f"**{row['title']}** ({row['subject']}) <br> <span style='color:{status_color}'>נותרו {days_left} ימים</span>", unsafe_allow_html=True)
-                    if cols[1].button("✅ סיום", key=f"done_{row['id']}"):
+                    status_color = "#ff4b2b" if days_left < 3 else "#92FE9D"
+                    days_text = f"נותרו {days_left} ימים" if st.session_state.lang == "עברית" else f"{days_left} days left"
+                    cols[0].markdown(f"**{row['title']}** ({row['subject']}) <br> <span style='color:{status_color}; font-weight:bold;'>{days_text}</span>", unsafe_allow_html=True)
+                    if cols[1].button("✅ סיום" if st.session_state.lang == "עברית" else "✅ Done", key=f"done_{row['id']}"):
                         delete_task(row['id']); fetch_tasks_cached.clear(); st.rerun()
                     st.divider()
         else:
-            st.info("אין משימות קרובות. אתה פנוי!")
+            st.info("אין משימות קרובות. אתה פנוי!" if st.session_state.lang == "עברית" else "No upcoming tasks. You are free!")
 
 # --- עמוד: הגדרות (Settings) ---
 elif menu == cur["m5"]:
-    st.markdown("<h1>הגדרות מתקדמות</h1>", unsafe_allow_html=True)
-    font_size_map = {"קטן": "0.9rem", "רגיל": "1.1rem", "גדול": "1.3rem"}
-    current_size_name = [k for k, v in font_size_map.items() if v == st.session_state.font_size][0]
-    new_size_name = st.select_slider("גודל טקסט בצ'אט", options=["קטן", "רגיל", "גדול"], value=current_size_name)
+    st.markdown(f"<h1>{cur['m5']}</h1>", unsafe_allow_html=True)
+    font_size_map = {"קטן": "0.9rem", "רגיל": "1.1rem", "גדול": "1.3rem"} if st.session_state.lang == "עברית" else {"Small": "0.9rem", "Normal": "1.1rem", "Large": "1.3rem"}
+    
+    current_size_name = [k for k, v in font_size_map.items() if v == st.session_state.font_size]
+    if not current_size_name: current_size_name = list(font_size_map.keys())[1] # fallback to normal
+    else: current_size_name = current_size_name[0]
+    
+    new_size_name = st.select_slider("גודל טקסט בצ'אט" if st.session_state.lang == "עברית" else "Chat Font Size", options=list(font_size_map.keys()), value=current_size_name)
     if font_size_map[new_size_name] != st.session_state.font_size: st.session_state.font_size = font_size_map[new_size_name]; st.rerun()
     st.divider()
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("נקה היסטוריית צ'אט", type="primary"): clear_chat_history(); st.session_state.chat_history = []; st.success("נמחק.")
+        if st.button("נקה היסטוריית צ'אט" if st.session_state.lang == "עברית" else "Clear Chat", type="primary"): clear_chat_history(); st.session_state.chat_history = []; st.success("נמחק." if st.session_state.lang == "עברית" else "Cleared.")
     with c2:
-        if st.button("רוקן זיכרון סורק", type="primary"): st.session_state.file_contexts = {}; st.success("נוקה.")
+        if st.button("רוקן זיכרון סורק" if st.session_state.lang == "עברית" else "Clear Scanner", type="primary"): st.session_state.file_contexts = {}; st.success("נוקה." if st.session_state.lang == "עברית" else "Cleared.")
     with c3:
         st.markdown("""<style>div.row-widget.stButton > button[kind="secondary"] {background: linear-gradient(135deg, #ff416c, #ff4b2b) !important; color: white !important;}</style>""", unsafe_allow_html=True)
-        if st.button("🚨 אפס מסד נתונים", type="secondary"): clear_db(); fetch_grades_cached.clear(); st.rerun()
+        if st.button("🚨 אפס מסד נתונים" if st.session_state.lang == "עברית" else "🚨 Reset DB", type="secondary"): clear_db(); fetch_grades_cached.clear(); st.rerun()
