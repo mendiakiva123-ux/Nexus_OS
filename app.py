@@ -3,13 +3,15 @@ import streamlit.components.v1 as components
 from streamlit_option_menu import option_menu
 import pandas as pd
 import plotly.express as px
+import datetime
+from zoneinfo import ZoneInfo
 from database_manager import save_grade, get_all_grades, clear_db, save_chat_message, get_persistent_chat_history, clear_chat_history
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
 # --- הגדרות ליבה (Page Config צריכה להיות הפקודה הראשונה) ---
 st.set_page_config(page_title="NEXUS CORE", page_icon="💎", layout="wide", initial_sidebar_state="expanded")
 
-# --- 1. מסך נעילה חכם (רק מספרים) ---
+# --- 1. מסך נעילה חכם (רק מספרים, ללא כפתור) ---
 if 'authenticated' not in st.session_state:
     st.session_state.authenticated = False
 
@@ -17,9 +19,9 @@ if not st.session_state.authenticated:
     st.markdown("""
         <style>
         .stApp {
-            background: linear-gradient(-45deg, #4158D0, #C850C0, #FFCC70);
+            background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
             background-size: 400% 400%;
-            animation: gradientBG 10s ease infinite;
+            animation: gradientBG 12s ease infinite;
             display: flex; align-items: center; justify-content: center;
         }
         @keyframes gradientBG {
@@ -28,11 +30,15 @@ if not st.session_state.authenticated:
             100% {background-position: 0% 50%;}
         }
         .lock-container {
-            background: rgba(255, 255, 255, 0.2);
-            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.5);
-            border-radius: 30px; padding: 40px; box-shadow: 0 15px 35px rgba(0,0,0,0.2);
+            background: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(25px); -webkit-backdrop-filter: blur(25px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            border-radius: 30px; padding: 50px 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.3);
             text-align: center; direction: rtl;
+        }
+        input[type="password"] {
+            font-size: 2rem !important; text-align: center !important; letter-spacing: 0.5rem;
+            background: rgba(255,255,255,0.8) !important; border-radius: 15px !important;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -40,10 +46,9 @@ if not st.session_state.authenticated:
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
         st.markdown("<div class='lock-container'>", unsafe_allow_html=True)
-        st.markdown("<h1 style='color:white; text-shadow: 0 4px 10px rgba(0,0,0,0.3); font-size:3rem;'>NEXUS OS</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='color:white; font-size:1.2rem;'>הכנס קוד גישה מאובטח</p>", unsafe_allow_html=True)
+        st.markdown("<h1 style='color:white; text-shadow: 0 4px 15px rgba(0,0,0,0.4); font-size:3.5rem;'>NEXUS</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='color:white; font-size:1.2rem; font-weight:bold;'>קוד גישה</p>", unsafe_allow_html=True)
         
-        # הקפצת מקלדת מספרים במובייל
         components.html("""
         <script>
             setTimeout(function() {
@@ -56,13 +61,14 @@ if not st.session_state.authenticated:
         </script>
         """, height=0)
 
-        pwd = st.text_input("", type="password", placeholder="****", label_visibility="collapsed")
-        if st.button("התחברות למערכת 🚀"):
-            if pwd == "7707":
-                st.session_state.authenticated = True
-                st.rerun()
-            else:
-                st.error("קוד שגוי. נסה שוב.")
+        # התחברות אוטומטית ללא כפתור (נבדק בכל הקלדה/אנטר)
+        pwd = st.text_input("", type="password", placeholder="****", max_chars=4, label_visibility="collapsed")
+        if pwd == "7707":
+            st.session_state.authenticated = True
+            st.rerun()
+        elif len(pwd) == 4 and pwd != "7707":
+            st.error("קוד שגוי.")
+            
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
@@ -73,8 +79,18 @@ if not st.session_state.authenticated:
 # אתחול משתני Session State
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
 if 'chat_history' not in st.session_state: st.session_state.chat_history = []
-if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {} # מילון לשמירת קבצים לפי מקצוע
+if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {} 
 if 'font_size' not in st.session_state: st.session_state.font_size = "1.1rem" 
+
+# --- ברכת שלום דינמית לפי שעה ---
+def get_greeting():
+    hour = datetime.datetime.now(ZoneInfo("Asia/Jerusalem")).hour
+    if 5 <= hour < 12: return "בוקר טוב"
+    elif 12 <= hour < 18: return "צהריים טובים"
+    elif 18 <= hour < 22: return "ערב טוב"
+    else: return "לילה טוב"
+
+greeting_text = f"{get_greeting()}, מנדי עקיבא! ✨"
 
 T = {
     "עברית": {
@@ -90,7 +106,7 @@ T = {
 }
 cur = T[st.session_state.lang]
 
-# --- CSS מטורף 3D: אנימציות, צבעים חיים, וזכוכית מרחפת ---
+# --- CSS 3D VIBRANT: אנימציות, צבעים חיים, וזכוכית מרחפת חזקה ---
 st.markdown(f"""
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;600;800&display=swap');
@@ -100,41 +116,53 @@ st.markdown(f"""
     footer {{visibility: hidden !important;}}
     html, body {{ max-width: 100vw; overflow-x: hidden; }}
     
+    /* רקע חי צבעוני ויוקרתי (Mesh Gradient) */
     .stApp {{ 
-        background: linear-gradient(120deg, #e0c3fc 0%, #8ec5fc 100%);
+        background: radial-gradient(circle at 15% 50%, #fdfbfb, #ebedee), radial-gradient(circle at 85% 30%, #e0c3fc, #8ec5fc);
+        background-blend-mode: multiply;
         color: #2c3e50; font-family: 'Assistant', sans-serif; 
     }}
     
     {" .main, [data-testid='stSidebar'], [data-testid='stChatMessageContent'] { direction: rtl !important; text-align: right !important; } " if st.session_state.lang == "עברית" else ""}
 
+    /* עיצוב 3D וזכוכית עבה לכרטיסיות ולצ'אט */
     div[data-testid="stMetric"], .stChatMessage, .stForm {{
-        background: rgba(255, 255, 255, 0.4) !important;
-        backdrop-filter: blur(15px) !important; -webkit-backdrop-filter: blur(15px) !important;
-        border: 1px solid rgba(255, 255, 255, 0.6) !important;
+        background: rgba(255, 255, 255, 0.55) !important;
+        backdrop-filter: blur(20px) !important; -webkit-backdrop-filter: blur(20px) !important;
+        border: 1px solid rgba(255, 255, 255, 0.8) !important;
         border-radius: 20px !important;
-        box-shadow: 0 10px 25px rgba(0,0,0,0.1) !important;
+        box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1) !important;
         padding: 15px;
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), box-shadow 0.3s ease;
     }}
     div[data-testid="stMetric"]:hover {{
-        transform: translateY(-5px); box-shadow: 0 15px 30px rgba(0,0,0,0.15) !important;
+        transform: translateY(-8px); box-shadow: 0 15px 35px rgba(31, 38, 135, 0.2) !important;
     }}
     
-    h1 {{ color: #1e3c72; text-align: center; font-weight: 800; text-shadow: 0 2px 5px rgba(0,0,0,0.1); }}
+    h1 {{ color: #1e3c72; text-align: center; font-weight: 800; text-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 5px;}}
     
     .stButton>button {{
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        color: white !important; font-weight: 800; border: none; border-radius: 50px !important; width: 100%;
-        box-shadow: 0 8px 15px rgba(118, 75, 162, 0.4) !important;
+        background: linear-gradient(135deg, #00C9FF 0%, #92FE9D 100%) !important;
+        color: #0b3d2c !important; font-weight: 800; border: none; border-radius: 50px !important; width: 100%;
+        box-shadow: 0 8px 20px rgba(0, 201, 255, 0.3) !important;
         transition: all 0.3s ease !important;
+        text-transform: uppercase; letter-spacing: 0.5px;
     }}
     .stButton>button:hover {{ 
-        transform: translateY(-4px) !important; 
-        box-shadow: 0 15px 20px rgba(118, 75, 162, 0.6) !important; 
+        transform: translateY(-5px) !important; 
+        box-shadow: 0 12px 25px rgba(0, 201, 255, 0.5) !important; 
     }}
     
     [data-testid="stChatMessageContent"] p, [data-testid="stChatMessageContent"] li {{
         font-size: {st.session_state.font_size} !important; color: #1a1a1a;
+    }}
+    
+    /* עיצוב ברכת השלום */
+    .greeting-box {{
+        text-align: center; font-size: 1.3rem; font-weight: 800;
+        background: -webkit-linear-gradient(45deg, #1e3c72, #2a5298);
+        -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+        margin-top: -15px; margin-bottom: 20px;
     }}
     </style>
 """, unsafe_allow_html=True)
@@ -146,10 +174,17 @@ def fetch_grades_cached():
 df = fetch_grades_cached()
 
 # --- מנגנון המקצועות הדינמי ---
-base_subjects = ["מתמטיקה", "אנגלית", "פיזיקה", "כתיבה אקדמית"]
+base_subjects = ["כללי", "מתמטיקה", "מדעי המחשב", "אנגלית", "פיזיקה", "כתיבה אקדמית", "➕ הוסף מקצוע חדש..."]
 db_subjects = df['subject'].unique().tolist() if not df.empty else []
-# איחוד הרשימות ללא כפילויות
-all_subjects = sorted(list(set(base_subjects + db_subjects)))
+# איחוד הרשימות (מנקה כפילויות ושומר על סדר הגיוני)
+temp_subjects = set(base_subjects + db_subjects)
+if "➕ הוסף מקצוע חדש..." in temp_subjects: temp_subjects.remove("➕ הוסף מקצוע חדש...")
+if "System_Init" in temp_subjects: temp_subjects.remove("System_Init")
+all_subjects = sorted(list(temp_subjects)) + ["➕ הוסף מקצוע חדש..."]
+
+# אינדקסים לברירות מחדל
+idx_math = all_subjects.index("מתמטיקה") if "מתמטיקה" in all_subjects else 0
+idx_general = all_subjects.index("כללי") if "כללי" in all_subjects else 0
 
 # --- תפריט צד (ניהול מקצועות, העלאת קבצים) ---
 with st.sidebar:
@@ -160,37 +195,25 @@ with st.sidebar:
     analyst_on = st.toggle(cur["analyst"], value=True)
     
     st.markdown("### 📚 ניהול חומר לימודי")
-    
-    # 1. הוספת מקצוע חדש
-    with st.expander("➕ הוסף מקצוע חדש למערכת"):
-        new_sub = st.text_input("שם המקצוע:")
-        if st.button("שמור מקצוע"):
-            if new_sub and new_sub not in all_subjects:
-                # שומר רשומה נסתרת ב-DB כדי שהמערכת תזכור את המקצוע לתמיד
-                save_grade(new_sub, "System_Init", 0, 0) 
-                fetch_grades_cached.clear()
-                st.rerun()
-                
-    st.divider()
-    
-    # 2. העלאת קבצים למקצוע ספציפי
-    upload_sub = st.selectbox("בחר מקצוע עבור הקובץ:", all_subjects)
-    up = st.file_uploader("סריקת PDF/DOCX", type=['pdf', 'docx'])
+    upload_sub = st.selectbox("שייך קובץ למקצוע:", all_subjects[:-1], index=idx_math) # מסיר את אופציית "הוסף חדש" מכאן
+    up = st.file_uploader("העלאת קבצים (כל הסוגים)", type=None) # מקבל הכל
     if up and st.button("סרוק לזיכרון הבוט"):
-        # שומר את הטקסט תחת המקצוע הספציפי
         st.session_state.file_contexts[upload_sub] = extract_text_from_file(up)
-        st.success(f"המידע נטען ושויך למקצוע: {upload_sub}")
+        st.success(f"המידע נטען למקצוע: {upload_sub}")
+
+# ברכת שלום עליונה
+st.markdown(f"<div class='greeting-box'>{greeting_text}</div>", unsafe_allow_html=True)
 
 # --- תפריט ניווט עליון צף ---
 menu = option_menu(None, [cur["m1"], cur["m2"], cur["m3"], cur["m4"]], 
                    icons=["bar-chart-fill", "chat-quote-fill", "database-fill", "gear-fill"], 
                    orientation="horizontal",
                    styles={
-                       "container": {"padding": "0!important", "background": "rgba(255,255,255,0.6)", "backdrop-filter": "blur(10px)", "border-radius": "20px", "box-shadow": "0 8px 20px rgba(0,0,0,0.1)", "margin-bottom": "25px"},
-                       "nav-link-selected": {"background": "linear-gradient(135deg, #667eea, #764ba2)", "font-weight": "bold", "color": "white", "border-radius": "15px"}
+                       "container": {"padding": "0!important", "background": "rgba(255,255,255,0.7)", "backdrop-filter": "blur(15px)", "border-radius": "20px", "box-shadow": "0 10px 30px rgba(0,0,0,0.08)", "margin-bottom": "25px"},
+                       "nav-link-selected": {"background": "linear-gradient(135deg, #00C9FF, #92FE9D)", "font-weight": "bold", "color": "#0b3d2c", "border-radius": "15px"}
                    })
 
-# סינון נתוני מערכת נסתרים (כדי שלא ישפיעו על ממוצע/גרפים)
+# סינון נתוני מערכת נסתרים
 df_valid = df[df['topic'] != 'System_Init'] if not df.empty else df
 
 if not df_valid.empty:
@@ -215,16 +238,28 @@ if menu == cur["m1"]:
     with l:
         st.markdown("### 📥 הזנת קורס חדש")
         with st.form("entry", clear_on_submit=True):
-            s = st.selectbox(cur["sub"], all_subjects) # מסונכרן עם כל המקצועות!
+            # בחירת מקצוע עם אופציה להוספה
+            selected_sub = st.selectbox(cur["sub"], all_subjects, index=idx_math)
+            
+            # אם בחר להוסיף מקצוע חדש
+            new_sub_input = ""
+            if selected_sub == "➕ הוסף מקצוע חדש...":
+                new_sub_input = st.text_input("הקלד שם מקצוע חדש:")
+                
             c = st.number_input(cur["cred"], min_value=0.5, max_value=10.0, value=3.0, step=0.5)
             g = st.number_input(cur["grd"], min_value=0, max_value=100, value=90)
+            
             if st.form_submit_button(cur["sync"]): 
-                save_grade(s, "", g, c)
-                fetch_grades_cached.clear()
-                st.rerun()
+                final_subject = new_sub_input if selected_sub == "➕ הוסף מקצוע חדש..." else selected_sub
+                if final_subject:
+                    save_grade(final_subject, "", g, c)
+                    fetch_grades_cached.clear()
+                    st.rerun()
+                else:
+                    st.error("חובה להזין שם מקצוע.")
     with r:
         if not df_valid.empty:
-            fig = px.bar(df_valid, x='subject', y='grade', color='grade', color_continuous_scale='Purp', title="הישגים לפי מקצועות")
+            fig = px.bar(df_valid, x='subject', y='grade', color='grade', color_continuous_scale='Mint', title="הישגים לפי מקצועות")
             fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color="#1e3c72")
             st.plotly_chart(fig, use_container_width=True)
 
@@ -236,17 +271,17 @@ elif menu == cur["m2"]:
         db_history = get_persistent_chat_history()
         st.session_state.chat_history = [{"role": m["role"], "content": m["content"]} for m in db_history]
 
-    # בחירת מקצוע לשיחה - מסונכרן עם הכל!
-    chat_sub = st.selectbox("נושא השיחה (הבוט ייגש לקבצים של מקצוע זה):", all_subjects, index=0)
+    # "כללי" כברירת מחדל בשיחה
+    chat_sub = st.selectbox("נושא השיחה (הבוט ייגש לקבצים של מקצוע זה):", all_subjects[:-1], index=idx_general)
     
-    chat_container = st.container(height=500)
+    chat_container = st.container(height=450)
     with chat_container:
         for m in st.session_state.chat_history:
             with st.chat_message(m["role"]):
                 st.markdown(f'<div style="text-align: right; direction: rtl;">{m["content"]}</div>', unsafe_allow_html=True)
 
     if p := st.chat_input(cur["ask"]):
-        # מעלים את המקלדת מיד עם השליחה במובייל
+        # העלמת מקלדת במובייל מיד לאחר שליחה
         components.html("""<script>window.parent.document.activeElement.blur();</script>""", height=0, width=0)
         
         st.session_state.chat_history.append({"role": "user", "content": p})
@@ -257,7 +292,6 @@ elif menu == cur["m2"]:
         with chat_container.chat_message("assistant"):
             placeholder = st.empty()
             full_res = ""
-            # שולף את הטקסט הספציפי שנסרק למקצוע הזה!
             context_for_bot = st.session_state.file_contexts.get(chat_sub, "")
             
             for chunk in get_ai_response_stream(chat_sub, p, st.session_state.chat_history[:-1], context_for_bot, st.session_state.lang, analyst_on):
@@ -270,7 +304,7 @@ elif menu == cur["m2"]:
 # --- עמוד: מסד נתונים ---
 elif menu == cur["m3"]:
     st.markdown(f"<h1>{cur['m3']}</h1>", unsafe_allow_html=True)
-    st.dataframe(df_valid, use_container_width=True, height=500) # מציג רק את הציונים האמיתיים
+    st.dataframe(df_valid, use_container_width=True, height=500) 
 
 # --- עמוד: הגדרות (Settings) ---
 elif menu == cur["m4"]:
