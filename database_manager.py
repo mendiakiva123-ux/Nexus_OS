@@ -6,7 +6,7 @@ url: str = st.secrets["SUPABASE_URL"]
 key: str = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(url, key)
 
-# --- ניהול ציונים (עודכן לממוצע אוניברסיטאי) ---
+# --- ניהול ציונים ---
 def save_grade(subject, topic, grade, credits=1.0, notes=""):
     try:
         data = {"subject": subject, "topic": topic, "grade": grade, "credits": credits, "notes": notes}
@@ -23,7 +23,6 @@ def get_all_grades():
 
 def clear_db():
     try:
-        # שיטה בטוחה למחיקה - מוחק הכל איפה שה-ID גדול מ-0
         supabase.table("grades").delete().gt("id", 0).execute()
     except Exception as e:
         print(f"Error clearing db: {e}")
@@ -42,7 +41,26 @@ def get_persistent_chat_history(limit=25):
 
 def clear_chat_history():
     try:
-        # שיטה בטוחה למחיקה - מוחק הכל איפה שה-ID גדול מ-0
         supabase.table("chat_history").delete().gt("id", 0).execute()
     except Exception as e:
         print(f"Error clearing chat: {e}")
+
+# --- ניהול משימות (חדש 4.0) ---
+def save_task(title, subject, due_date):
+    try:
+        data = {"title": title, "subject": subject, "due_date": str(due_date), "status": "TODO"}
+        supabase.table("tasks").insert(data).execute()
+    except Exception as e:
+        pass
+
+def get_all_tasks():
+    try:
+        res = supabase.table("tasks").select("*").order("due_date", desc=False).execute()
+        return pd.DataFrame(res.data)
+    except:
+        return pd.DataFrame(columns=["id", "title", "subject", "due_date", "status"])
+
+def delete_task(task_id):
+    try:
+        supabase.table("tasks").delete().eq("id", task_id).execute()
+    except: pass
