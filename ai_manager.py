@@ -2,6 +2,8 @@ import streamlit as st
 import google.generativeai as genai
 import PyPDF2
 import docx
+import datetime
+from zoneinfo import ZoneInfo
 
 def extract_text_from_file(uploaded_file):
     text = ""
@@ -22,8 +24,6 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         
         # פתרון ה-404: מציאת המודל הזמין באופן דינמי
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        
-        # מחפש מודל מסוג Flash. אם לא מוצא, לוקח את הראשון שזמין (מונע 404 לחלוטין).
         model_name = next((m for m in available_models if "flash" in m), available_models[0])
         model = genai.GenerativeModel(model_name)
         
@@ -32,14 +32,27 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         for msg in chat_history_list:
             role = "user" if msg["role"] == "user" else "model"
             history.append({"role": role, "parts": [msg["content"]]})
+            
+        # סנכרון זמן מדויק - שעון ישראל
+        israel_time = datetime.datetime.now(ZoneInfo("Asia/Jerusalem"))
+        current_time_str = israel_time.strftime("%A, %d/%m/%Y, %H:%M")
         
         # הגדרת אישיות
         role_type = "Data Analyst Expert" if analyst_mode else "Academic Mentor"
-        instruct = "ענה בעברית בלבד! ישר את הטקסט לימין (RTL)." if lang == "עברית" else "Respond in English only."
+        instruct = "ענה בעברית בלבד! ישר את הטקסט לימין (RTL). התייחס למשתמש בלשון זכר." if lang == "עברית" else "Respond in English only."
         
-        system_msg = f"System: {role_type}. {instruct} Subject: {subject}.\n"
+        # --- המוח של NEXUS: פרופיל מערכת מוזרק ---
+        system_msg = (
+            f"System Role: {role_type}. {instruct}\n"
+            f"זמן נוכחי (קריטי): {current_time_str}\n"
+            f"פרופיל אקדמי של המשתמש: מנדי הוא חייל לקראת שחרור וסטודנט מצטיין בקורס דאטה אנליסט במכללת עתיד בבאר שבע. "
+            f"הוא עובד עם Python, SQL, ו-Power BI, ומתוכנן להמשיך למכינה ותואר במדעי המחשב. "
+            f"דרוש ממך להיות חד, מקצועי, ולתת דוגמאות טכניות מדויקות שמתאימות לרמה ולכלים שהוא לומד.\n"
+            f"Subject Context: {subject}.\n"
+        )
+        
         if file_context:
-            system_msg += f"Context: {file_context[:8000]}"
+            system_msg += f"Context from files: {file_context[:8000]}\n"
 
         # התחלת שיחה עם זיכרון והקשר
         chat = model.start_chat(history=history)
