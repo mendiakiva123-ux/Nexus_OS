@@ -6,7 +6,7 @@ from database_manager import save_grade, get_all_grades, clear_db, save_chat_mes
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
 # --- הגדרות ליבה (Page Config צריכה להיות הפקודה הראשונה) ---
-st.set_page_config(page_title="NEXUS CORE", page_icon="🤖", layout="wide")
+st.set_page_config(page_title="NEXUS CORE", page_icon="🤖", layout="wide", initial_sidebar_state="expanded")
 
 # אתחול משתני Session State
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
@@ -36,10 +36,14 @@ st.markdown(f"""
     @import url('https://fonts.googleapis.com/css2?family=Assistant:wght@300;600;800&family=Orbitron:wght@700&display=swap');
     
     /* תצורת אפליקציית מובייל (Mobile App Mode) */
-    header {{visibility: hidden !important;}}
+    /* מסתיר אלמנטים לא רצויים, אך משאיר את כפתור פתיחת ה-Sidebar זמין */
+    header[data-testid="stHeader"] {{
+        background: transparent !important;
+    }}
+    .stAppDeployButton {{display: none;}} /* מסתיר את כפתור ה-Deploy */
     footer {{visibility: hidden !important;}}
     html, body {{ max-width: 100vw; overflow-x: hidden; }}
-    .block-container {{ padding-top: 1rem !important; padding-bottom: 2rem !important; }}
+    .block-container {{ padding-top: 2.5rem !important; padding-bottom: 2rem !important; }}
 
     .stApp {{ background: radial-gradient(circle at top right, #050a12, #000000); color: #e0f7fa; font-family: 'Assistant', sans-serif; }}
     
