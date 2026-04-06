@@ -6,56 +6,66 @@ url: str = st.secrets["SUPABASE_URL"]
 key: str = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(url, key)
 
-# --- ניהול ציונים ---
-def save_grade(subject, topic, grade, credits=1.0, notes=""):
+# --- ניהול משתמשים ---
+def authenticate_user(code):
     try:
-        data = {"subject": subject, "topic": topic, "grade": grade, "credits": credits, "notes": notes}
+        res = supabase.table("users").select("*").eq("passcode", code).execute()
+        return res.data[0] if res.data else None
+    except: return None
+
+def update_user_name(user_id, name):
+    try:
+        supabase.table("users").update({"user_name": name}).eq("user_id", user_id).execute()
+        return True
+    except: return False
+
+# --- ניהול ציונים ---
+def save_grade(user_id, subject, topic, grade, credits=1.0, notes=""):
+    try:
+        data = {"user_id": user_id, "subject": subject, "topic": topic, "grade": grade, "credits": credits, "notes": notes}
         supabase.table("grades").insert(data).execute()
     except Exception as e:
-        st.error(f"שגיאת סנכרון נתונים: {e}")
+        st.error(f"Error: {e}")
 
-def get_all_grades():
+def get_all_grades(user_id):
     try:
-        res = supabase.table("grades").select("*").order("created_at", desc=True).execute()
+        res = supabase.table("grades").select("*").eq("user_id", user_id).order("created_at", desc=True).execute()
         return pd.DataFrame(res.data)
     except:
         return pd.DataFrame(columns=["id", "subject", "topic", "grade", "credits", "created_at"])
 
-def clear_db():
+def clear_db(user_id):
     try:
-        supabase.table("grades").delete().gt("id", 0).execute()
-    except Exception as e:
-        print(f"Error clearing db: {e}")
-
-# --- ניהול זיכרון צ'אט ---
-def save_chat_message(role, content):
-    try:
-        supabase.table("chat_history").insert({"role": role, "content": content}).execute()
+        supabase.table("grades").delete().eq("user_id", user_id).execute()
     except: pass
 
-def get_persistent_chat_history(limit=25):
+# --- ניהול זיכרון צ'אט ---
+def save_chat_message(user_id, role, content):
     try:
-        res = supabase.table("chat_history").select("*").order("created_at", desc=False).limit(limit).execute()
+        supabase.table("chat_history").insert({"user_id": user_id, "role": role, "content": content}).execute()
+    except: pass
+
+def get_persistent_chat_history(user_id, limit=25):
+    try:
+        res = supabase.table("chat_history").select("*").eq("user_id", user_id).order("created_at", desc=False).limit(limit).execute()
         return res.data
     except: return []
 
-def clear_chat_history():
+def clear_chat_history(user_id):
     try:
-        supabase.table("chat_history").delete().gt("id", 0).execute()
-    except Exception as e:
-        print(f"Error clearing chat: {e}")
+        supabase.table("chat_history").delete().eq("user_id", user_id).execute()
+    except: pass
 
-# --- ניהול משימות (חדש 4.0) ---
-def save_task(title, subject, due_date):
+# --- ניהול משימות ---
+def save_task(user_id, title, subject, due_date):
     try:
-        data = {"title": title, "subject": subject, "due_date": str(due_date), "status": "TODO"}
+        data = {"user_id": user_id, "title": title, "subject": subject, "due_date": str(due_date)}
         supabase.table("tasks").insert(data).execute()
-    except Exception as e:
-        pass
+    except: pass
 
-def get_all_tasks():
+def get_all_tasks(user_id):
     try:
-        res = supabase.table("tasks").select("*").order("due_date", desc=False).execute()
+        res = supabase.table("tasks").select("*").eq("user_id", user_id).order("due_date", desc=False).execute()
         return pd.DataFrame(res.data)
     except:
         return pd.DataFrame(columns=["id", "title", "subject", "due_date", "status"])
