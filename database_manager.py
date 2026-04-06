@@ -6,7 +6,7 @@ url: str = st.secrets["SUPABASE_URL"]
 key: str = st.secrets["SUPABASE_KEY"]
 supabase: Client = create_client(url, key)
 
-# --- ניהול משתמשים ---
+# --- ניהול משתמשים (חדש!) ---
 def authenticate_user(code):
     try:
         res = supabase.table("users").select("*").eq("passcode", code).execute()
@@ -16,16 +16,14 @@ def authenticate_user(code):
 def update_user_name(user_id, name):
     try:
         supabase.table("users").update({"user_name": name}).eq("user_id", user_id).execute()
-        return True
-    except: return False
+    except: pass
 
-# --- ניהול ציונים ---
+# --- ניהול ציונים (מסונן לפי משתמש) ---
 def save_grade(user_id, subject, topic, grade, credits=1.0, notes=""):
     try:
         data = {"user_id": user_id, "subject": subject, "topic": topic, "grade": grade, "credits": credits, "notes": notes}
         supabase.table("grades").insert(data).execute()
-    except Exception as e:
-        st.error(f"Error: {e}")
+    except: pass
 
 def get_all_grades(user_id):
     try:
@@ -39,7 +37,7 @@ def clear_db(user_id):
         supabase.table("grades").delete().eq("user_id", user_id).execute()
     except: pass
 
-# --- ניהול זיכרון צ'אט ---
+# --- ניהול זיכרון צ'אט (מסונן לפי משתמש) ---
 def save_chat_message(user_id, role, content):
     try:
         supabase.table("chat_history").insert({"user_id": user_id, "role": role, "content": content}).execute()
@@ -56,7 +54,7 @@ def clear_chat_history(user_id):
         supabase.table("chat_history").delete().eq("user_id", user_id).execute()
     except: pass
 
-# --- ניהול משימות ---
+# --- ניהול משימות (מסונן לפי משתמש) ---
 def save_task(user_id, title, subject, due_date):
     try:
         data = {"user_id": user_id, "title": title, "subject": subject, "due_date": str(due_date)}
