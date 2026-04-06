@@ -6,3 +6,5 @@ supabase
 plotly
 PyPDF2
 python-docx
+openpyxl
+streamlit-mic-recorder
