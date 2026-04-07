@@ -3,6 +3,7 @@ import google.generativeai as genai
 import PyPDF2
 import docx
 import datetime
+import time
 from zoneinfo import ZoneInfo
 
 def extract_text_from_file(uploaded_file):
@@ -28,10 +29,15 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         # בחירת המודל הכי מהיר וחכם הזמין (Flash)
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         model_name = next((m for m in available_models if "flash" in m), available_models[0])
-        model = genai.GenerativeModel(model_name)
+        
+        # 🌐 חיבור חכם לאינטרנט בלייב - מופעל!
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            tools='google_search'
+        )
         
         history = []
-        if not is_quiz:
+        if not is_quiz: # בחנים לא צריכים זיכרון של שיחות קודמות
             for msg in chat_history_list:
                 role = "user" if msg["role"] == "user" else "model"
                 history.append({"role": role, "parts": [msg["content"]]})
@@ -45,7 +51,8 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         
         system_msg = (
             f"System Role: {role_type}. {instruct}\n"
-            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}. Ensure all your political, technological, and real-world knowledge reflects 2026 reality.\n\n"
+            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}.\n"
+            f"You are connected to Google Search. If the user asks about current events, news, recent tech updates, or real-time data, USE THE SEARCH TOOL to fetch accurate, up-to-date information.\n\n"
             f"--- USER PROFILE (CRITICAL CONTEXT) ---\n"
             f"Name: Mendi.\n"
             f"Background: IDF soldier nearing the end of his service. Enrolled in a rigorous Data Analyst program (Atid College/Metro-Tech Blue Line).\n"
@@ -82,12 +89,37 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         if file_context:
             system_msg += f"\n--- KNOWLEDGE BASE (FILE CONTEXT) ---\n{file_context[:50000]}\n"
 
-        chat = model.start_chat(history=history)
-        response = chat.send_message(f"{system_msg}\n\nUser: {prompt}", stream=True)
+        # --- מנגנון ניסיונות חוזרים חכם (Auto-Retry) כנגד קריסות שרת ---
+        max_retries = 3
+        yielded_any = False
         
-        for chunk in response:
-            if chunk.text:
-                yield chunk.text
+        for attempt in range(max_retries):
+            try:
+                chat = model.start_chat(history=history)
+                response = chat.send_message(f"{system_msg}\n\nUser: {prompt}", stream=True)
+                
+                for chunk in response:
+                    if chunk.text:
+                        yielded_any = True
+                        yield chunk.text
+                
+                break # יציאה מהלולאה אם התשובה הושלמה בהצלחה
+                
+            except Exception as e:
+                error_msg = str(e).lower()
+                
+                # אם השרת עמוס ועוד לא התחלנו להדפיס למסך, נמתין וננסה שוב בשקט
+                if not yielded_any and ("503" in error_msg or "quota" in error_msg or "overloaded" in error_msg):
+                    if attempt < max_retries - 1:
+                        time.sleep(2) # המתנה של 2 שניות
+                        continue
+                
+                # אם כל הניסיונות נכשלו או שהייתה קריסה באמצע משפט
+                if "503" in error_msg or "quota" in error_msg or "overloaded" in error_msg:
+                    yield "\n\n*(הערת מערכת: שרתי ה-AI של גוגל עמוסים כרגע. אנא המתן מספר שניות ונסה שוב).* 🔄"
+                else:
+                    yield f"\n\n🚨 שגיאה: {str(e)}\n(אם השגיאה קשורה ל-tools, ודא שהספרייה google-generativeai מעודכנת בשרת לגרסה 0.7.0 ומעלה)."
+                break
                 
     except Exception as e:
-        yield f"🚨 תקלת חיבור למנוע ה-AI. פרטים טכניים: {str(e)}\nאנא נסה שוב או בדוק את מפתח ה-API שלך."
+        yield f"🚨 תקלת חיבור כללית: {str(e)}\nבדוק את מפתח ה-API שלך."
