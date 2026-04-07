@@ -25,13 +25,18 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         
-        # בחירת המודל הכי מהיר וחכם הזמין (Flash)
+        # בחירת המודל
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         model_name = next((m for m in available_models if "flash" in m), available_models[0])
-        model = genai.GenerativeModel(model_name)
+        
+        # 🌐 חיבור חכם לאינטרנט בלייב
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            tools='google_search_retrieval'
+        )
         
         history = []
-        if not is_quiz:
+        if not is_quiz: # בחנים לא צריכים זיכרון של שיחות קודמות
             for msg in chat_history_list:
                 role = "user" if msg["role"] == "user" else "model"
                 history.append({"role": role, "parts": [msg["content"]]})
@@ -45,7 +50,8 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         
         system_msg = (
             f"System Role: {role_type}. {instruct}\n"
-            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}. Ensure all your political, technological, and real-world knowledge reflects 2026 reality.\n\n"
+            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}.\n"
+            f"You are connected to Google Search. If the user asks about current events, news, recent tech updates, or real-time data, USE THE SEARCH TOOL to fetch accurate, up-to-date information.\n\n"
             f"--- USER PROFILE (CRITICAL CONTEXT) ---\n"
             f"Name: Mendi.\n"
             f"Background: IDF soldier nearing the end of his service. Enrolled in a rigorous Data Analyst program (Atid College/Metro-Tech Blue Line).\n"
@@ -78,7 +84,6 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
                 f"Format: Present the 5 questions clearly. DO NOT reveal the answers immediately. At the very bottom, add a section called 'תשובות נכונות' (Correct Answers) with brief explanations for each.\n"
             )
             
-        # הרחבת זיכרון הקבצים ל-50,000 תווים (כ-10,000 מילים)
         if file_context:
             system_msg += f"\n--- KNOWLEDGE BASE (FILE CONTEXT) ---\n{file_context[:50000]}\n"
 
@@ -90,4 +95,4 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
                 yield chunk.text
                 
     except Exception as e:
-        yield f"🚨 תקלת חיבור למנוע ה-AI. פרטים טכניים: {str(e)}\nאנא נסה שוב או בדוק את מפתח ה-API שלך."
+        yield f"🚨 תקלת חיבור למנוע ה-AI. פרטים טכניים: {str(e)}\nאם השגיאה קשורה ל-Tools, יש לעדכן את גרסת ה-API (pip install -U google-generativeai)."
