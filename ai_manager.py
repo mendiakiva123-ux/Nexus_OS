@@ -25,10 +25,15 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         
-        # בחירת המודל הכי מהיר וחכם הזמין (Flash)
+        # בחירת המודל הכי מהיר וחכם הזמין
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         model_name = next((m for m in available_models if "flash" in m), available_models[0])
-        model = genai.GenerativeModel(model_name)
+        
+        # 🌐 חיבור חכם לאינטרנט בלייב: אנחנו מציידים את המודל בכלי חיפוש של גוגל
+        model = genai.GenerativeModel(
+            model_name=model_name,
+            tools='google_search_retrieval'
+        )
         
         history = []
         if not is_quiz:
@@ -45,40 +50,36 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         
         system_msg = (
             f"System Role: {role_type}. {instruct}\n"
-            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}. Ensure all your political, technological, and real-world knowledge reflects 2026 reality.\n\n"
-            f"--- USER PROFILE (CRITICAL CONTEXT) ---\n"
+            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}.\n"
+            f"You are connected to Google Search. If the user asks about current events, news, recent tech updates, or real-time data, USE THE SEARCH TOOL to fetch accurate, up-to-date information.\n\n"
+            f"--- USER PROFILE ---\n"
             f"Name: Mendi.\n"
-            f"Background: IDF soldier nearing the end of his service. Enrolled in a rigorous Data Analyst program (Atid College/Metro-Tech Blue Line).\n"
-            f"Future Plans: Attending a pre-mechina and Mechina (Math, Physics, English) leading into a Computer Science degree.\n"
-            f"Tech Stack & Experience: Python (Pandas, FastAPI), SQL (ERD, complex joins), Power BI, Advanced Excel. Completed projects analyzing Flight Delays and Earthquake/Tsunami data (Ring of Fire).\n\n"
+            f"Background: IDF soldier nearing the end of his service. Enrolled in a rigorous Data Analyst program.\n"
+            f"Future Plans: Attending a pre-mechina and Mechina leading into a Computer Science degree.\n"
+            f"Tech Stack: Python (Pandas, FastAPI), SQL (ERD, joins), Power BI, Advanced Excel.\n\n"
         )
 
         if analyst_mode:
             system_msg += (
                 f"--- DATA ANALYST MODE RULES ---\n"
-                f"1. Code Quality: Provide clean, highly optimized, PEP8-compliant Python code. Use best practices for data manipulation.\n"
-                f"2. SQL: When writing SQL, focus on efficiency, correct JOINs, and explain the query logic. Use standard PostgreSQL syntax.\n"
-                f"3. Power BI/DAX: Provide accurate DAX measures and explain data modeling (Star Schema) clearly.\n"
-                f"4. Analogies: Feel free to use examples from flight data or seismic activity to explain complex concepts to him, as he is familiar with these datasets.\n"
-                f"5. Professionalism: Treat him as a junior data analyst gearing up for the tech industry. Give him tips for his LinkedIn and job hunt when relevant.\n"
+                f"1. Code Quality: Provide clean, PEP8-compliant Python code.\n"
+                f"2. SQL: Focus on efficiency, correct JOINs, and explain the query logic.\n"
+                f"3. Power BI/DAX: Provide accurate DAX measures and explain data modeling clearly.\n"
             )
         else:
             system_msg += (
                 f"--- ACADEMIC MENTOR MODE RULES ---\n"
                 f"Subject Focus: {subject}.\n"
-                f"1. STEM (Math/Physics/CS): Do NOT just give the final answer. Break down formulas, explain the core logic, and use the Socratic method to help him understand the 'Why'.\n"
-                f"2. English/General: Help him master academic writing, professional vocabulary, and everyday conversational English/slang if he asks. Broaden his general knowledge horizons.\n"
-                f"3. Tone: Encouraging, academic, highly structured. Use bullet points and bold text for readability.\n"
+                f"1. STEM: Break down formulas, explain the core logic, and use the Socratic method.\n"
+                f"2. Tone: Encouraging, academic, structured.\n"
             )
             
         if is_quiz:
             system_msg = (
                 f"System Role: Strict Academic Examiner. Subject: {subject}.\n"
-                f"Action Required: Generate a comprehensive, challenging 5-question multiple-choice quiz based STRICTLY on the provided file context or subject matter.\n"
-                f"Format: Present the 5 questions clearly. DO NOT reveal the answers immediately. At the very bottom, add a section called 'תשובות נכונות' (Correct Answers) with brief explanations for each.\n"
+                f"Action: Generate a 5-question multiple-choice quiz based on the context. Do not reveal answers immediately. Add 'Correct Answers' at the bottom.\n"
             )
             
-        # הרחבת זיכרון הקבצים ל-50,000 תווים (כ-10,000 מילים)
         if file_context:
             system_msg += f"\n--- KNOWLEDGE BASE (FILE CONTEXT) ---\n{file_context[:50000]}\n"
 
@@ -90,4 +91,4 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
                 yield chunk.text
                 
     except Exception as e:
-        yield f"🚨 תקלת חיבור למנוע ה-AI. פרטים טכניים: {str(e)}\nאנא נסה שוב או בדוק את מפתח ה-API שלך."
+        yield f"🚨 תקלת בינה מלאכותית: {str(e)}\nאם השגיאה קשורה ל-Tools, ייתכן שגרסת ה-API שלך דורשת עדכון (pip install -U google-generativeai)."
