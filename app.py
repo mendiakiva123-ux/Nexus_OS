@@ -9,76 +9,63 @@ import io
 from database_manager import save_grade, get_all_grades, clear_db, save_chat_message, get_persistent_chat_history, clear_chat_history, save_task, get_all_tasks, delete_task
 from ai_manager import get_ai_response_stream, extract_text_from_file
 
-# --- הגדרות ליבה (Command Center) ---
-st.set_page_config(page_title="NEXUS CORE OS", page_icon="🌌", layout="wide", initial_sidebar_state="collapsed")
+# --- הגדרות ליבה ---
+st.set_page_config(page_title="NEXUS CORE", page_icon="💎", layout="wide", initial_sidebar_state="expanded")
 
-# תמונת רקע - חלל/רשת נירונים (SpaceX / Neuralink Vibe)
-BG_IMAGE_URL = "https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2560&auto=format&fit=crop"
+# תמונת רקע - 4K High-End
+BG_IMAGE_URL = "https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2560&auto=format&fit=crop"
 
-# ==========================================
-# --- מסך נעילה ביטחוני סופר-פרימיום ---
-# ==========================================
+# --- מסך נעילה חכם וסינמטי ---
 if 'authenticated' not in st.session_state: st.session_state.authenticated = False
-if 'dark_mode' not in st.session_state: st.session_state.dark_mode = True # Default to Dark Mode for the Cyber look
+if 'dark_mode' not in st.session_state: st.session_state.dark_mode = False
 
 if not st.session_state.authenticated:
     st.markdown(f"""
         <style>
-        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&family=JetBrains+Mono:wght@400;700&display=swap');
-        html, body {{ font-family: 'Heebo', sans-serif; background-color: #000; overflow: hidden; }}
+        @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;700;900&family=Inter:wght@400;700&display=swap');
+        html, body {{ font-family: 'Heebo', sans-serif; }}
         .stApp {{ 
-            background-image: linear-gradient(rgba(0, 5, 15, 0.85), rgba(0, 0, 0, 0.95)), url('{BG_IMAGE_URL}'); 
-            background-size: cover; background-position: center; 
-            display: flex; align-items: center; justify-content: center; height: 100vh;
+            background-image: linear-gradient(rgba(5, 10, 20, 0.7), rgba(0, 0, 0, 0.9)), url('{BG_IMAGE_URL}'); 
+            background-size: cover; background-position: center; background-attachment: fixed;
+            display: flex; align-items: center; justify-content: center; 
         }}
-        /* אובייקט סריקה שעובר על המסך */
-        .scan-line {{
-            position: absolute; width: 100%; height: 4px; background: rgba(0, 255, 255, 0.5);
-            box-shadow: 0 0 20px rgba(0, 255, 255, 0.8);
-            animation: scan 4s linear infinite; top: 0; left: 0; z-index: 999; pointer-events: none;
+        @keyframes fadeInLock {{ from {{ opacity: 0; transform: translateY(30px) scale(0.95); }} to {{ opacity: 1; transform: translateY(0) scale(1); }} }}
+        @keyframes pulseGlow {{ 0% {{ text-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }} 50% {{ text-shadow: 0 0 30px rgba(139, 92, 246, 0.8), 0 0 10px rgba(59, 130, 246, 0.5); }} 100% {{ text-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }} }}
+        .lock-container {{ 
+            background: rgba(20, 25, 35, 0.4); 
+            backdrop-filter: blur(30px) saturate(150%); 
+            -webkit-backdrop-filter: blur(30px) saturate(150%);
+            border: 1px solid rgba(255, 255, 255, 0.1); 
+            border-radius: 40px; 
+            padding: 60px 50px; 
+            box-shadow: 0 40px 80px rgba(0,0,0,0.8), inset 0 1px 0 rgba(255,255,255,0.2); 
+            text-align: center; 
+            direction: rtl;
+            animation: fadeInLock 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }}
-        @keyframes scan {{ 0% {{ top: -10%; opacity: 0; }} 10% {{ opacity: 1; }} 90% {{ opacity: 1; }} 100% {{ top: 110%; opacity: 0; }} }}
-        @keyframes bootUp {{ 0% {{ filter: brightness(0) contrast(2); transform: scale(0.9); }} 100% {{ filter: brightness(1) contrast(1); transform: scale(1); }} }}
-        
-        .terminal-box {{ 
-            background: rgba(10, 15, 25, 0.6); 
-            backdrop-filter: blur(40px) saturate(200%); -webkit-backdrop-filter: blur(40px);
-            border: 1px solid rgba(0, 255, 255, 0.15); border-radius: 20px; 
-            padding: 60px; box-shadow: 0 0 50px rgba(0,0,0,0.8), inset 0 0 20px rgba(0, 255, 255, 0.05); 
-            text-align: center; direction: rtl; max-width: 500px; margin: auto;
-            animation: bootUp 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-            position: relative; overflow: hidden;
-        }}
-        .terminal-box::before {{ content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #00f2fe, transparent); }}
-        
-        h1.nexus-title {{ font-family: 'JetBrains Mono', monospace; color: #fff; font-size: 3.5rem; font-weight: 700; letter-spacing: 5px; text-shadow: 0 0 20px rgba(0, 242, 254, 0.6); margin-bottom: 5px; }}
-        .status-text {{ font-family: 'JetBrains Mono', monospace; color: #00f2fe; font-size: 0.9rem; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 40px; }}
-        
+        h1.nexus-title {{ color: #ffffff; font-size: 4rem; font-weight: 900; letter-spacing: 4px; animation: pulseGlow 4s infinite; margin-bottom: 0; }}
         input[type="password"] {{ 
-            font-family: 'JetBrains Mono', monospace !important; font-size: 2.5rem !important; text-align: center !important; letter-spacing: 1.5rem; 
-            background: rgba(0,0,0,0.5) !important; color: #00f2fe !important; 
-            border: 1px solid rgba(0, 242, 254, 0.3) !important; border-radius: 12px !important; 
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.8); transition: all 0.3s ease;
+            font-size: 2.5rem !important; text-align: center !important; letter-spacing: 1rem; 
+            background: rgba(255,255,255,0.05) !important; color: #fff !important; 
+            border: 2px solid rgba(255,255,255,0.2) !important; border-radius: 20px !important; 
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.5); transition: all 0.3s;
         }}
-        input[type="password"]:focus {{ border-color: #00f2fe !important; box-shadow: 0 0 30px rgba(0, 242, 254, 0.2), inset 0 0 15px rgba(0,0,0,0.8) !important; outline: none; }}
+        input[type="password"]:focus {{ border-color: #8b5cf6 !important; box-shadow: 0 0 20px rgba(139, 92, 246, 0.4), inset 0 4px 10px rgba(0,0,0,0.5) !important; }}
         </style>
-        <div class="scan-line"></div>
     """, unsafe_allow_html=True)
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        st.markdown("<div class='terminal-box'><h1 class='nexus-title'>NEXUS_OS</h1><p class='status-text'>Awaiting Authorization_</p>", unsafe_allow_html=True)
+        st.markdown("<div class='lock-container'><h1 class='nexus-title'>NEXUS</h1><p style='color:#94a3b8; font-size:1.1rem; font-weight:400; margin-top:5px; margin-bottom:30px;'>מערכת ליבה מנותקת</p>", unsafe_allow_html=True)
         components.html("""<script>setTimeout(function() { var inputs = window.parent.document.querySelectorAll('input[type="password"]'); for(var i=0; i<inputs.length; i++){ inputs[i].setAttribute('inputmode', 'numeric'); inputs[i].setAttribute('pattern', '[0-9]*'); } }, 500);</script>""", height=0)
         pwd = st.text_input("", type="password", placeholder="****", max_chars=4, label_visibility="collapsed")
-        if pwd == "5050": 
-            st.session_state.authenticated = True; st.rerun()
-        elif len(pwd) == 4 and pwd != "5050": 
-            st.error("ACCESS DENIED.")
+        if pwd == "5050": st.session_state.authenticated = True; st.rerun()
+        elif len(pwd) == 4 and pwd != "5050": st.error("קוד שגיאה: הרשאה נדחתה.")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
 # ==========================================
-# --- מערכת הליבה - NEXUS OS ---
+# --- מכאן מתחילה האפליקציה ---
 # ==========================================
 
 if 'lang' not in st.session_state: st.session_state.lang = "עברית"
@@ -86,354 +73,355 @@ if 'chat_history' not in st.session_state: st.session_state.chat_history = []
 if 'file_contexts' not in st.session_state: st.session_state.file_contexts = {} 
 if 'font_size' not in st.session_state: st.session_state.font_size = "1.1rem" 
 
-# --- מנוע ברכות סמארט ---
+# --- ברכת שלום חכמה (מתורגמת) ---
 def get_greeting(lang):
     hour = datetime.datetime.now(ZoneInfo("Asia/Jerusalem")).hour
     if lang == "עברית":
-        if 5 <= hour < 12: return "בוקר טוב, מנדי עקיבא."
-        elif 12 <= hour < 18: return "צהריים טובים, מנדי עקיבא."
-        elif 18 <= hour < 22: return "ערב טוב, מנדי עקיבא."
-        else: return "לילה טוב, מנדי עקיבא."
+        if 5 <= hour < 12: return "בוקר טוב, מנדי עקיבא! ✨"
+        elif 12 <= hour < 18: return "צהריים טובים, מנדי עקיבא! ✨"
+        elif 18 <= hour < 22: return "ערב טוב, מנדי עקיבא! ✨"
+        else: return "לילה טוב, מנדי עקיבא! ✨"
     else:
-        if 5 <= hour < 12: return "Good Morning, Mendi."
-        elif 12 <= hour < 18: return "Good Afternoon, Mendi."
-        elif 18 <= hour < 22: return "Good Evening, Mendi."
-        else: return "Good Night, Mendi."
+        if 5 <= hour < 12: return "Good Morning, Mendi Akiva! ✨"
+        elif 12 <= hour < 18: return "Good Afternoon, Mendi Akiva! ✨"
+        elif 18 <= hour < 22: return "Good Evening, Mendi Akiva! ✨"
+        else: return "Good Night, Mendi Akiva! ✨"
 
 greeting_text = get_greeting(st.session_state.lang)
 
-# --- מילון שפות ---
+# מילון השפות
 T = {
     "עברית": {
-        "m1": "מרכז בקרה", "m2": "בינה מלאכותית", "m3": "מסד נתונים", "m4": "משימות ויעדים", "m5": "הגדרות מערכת",
-        "avg": "ממוצע משוקלל", "count": "קורסים הושלמו", "sub": "מקצוע", "grd": "ציון", "cred": "נ\"ז", "sync": "סנכרן נתונים",
-        "analyst": "מצב Analyst 📊", "ask": "פקודה חדשה ל-AI...", "clear": "נקה זיכרון"
+        "title": "NEXUS ACADEMY", "m1": "מרכז אקדמי", "m2": "צ'אט AI", "m3": "מסד נתונים", "m4": "לוח משימות 📅", "m5": "הגדרות",
+        "avg": "ממוצע משוקלל", "count": "קורסים", "sub": "מקצוע", "grd": "ציון", "cred": "נ\"ז", "sync": "שמור נתונים",
+        "analyst": "מצב דאטה אנליסט 📊", "ask": "שאל את הבוט...", "clear": "נקה זיכרון"
     },
     "English": {
-        "m1": "Command Center", "m2": "AI Terminal", "m3": "Data Vault", "m4": "Objectives", "m5": "System Config",
-        "avg": "Weighted GPA", "count": "Courses Completed", "sub": "Subject", "grd": "Grade", "cred": "Credits", "sync": "Sync Data",
-        "analyst": "Analyst Mode 📊", "ask": "New AI Command...", "clear": "Clear Memory"
+        "title": "NEXUS ACADEMY", "m1": "Dashboard", "m2": "AI Mentor", "m3": "Vault", "m4": "Task Board 📅", "m5": "Settings",
+        "avg": "Weighted GPA", "count": "Courses", "sub": "Subject", "grd": "Grade", "cred": "Credits", "sync": "Save",
+        "analyst": "Analyst Mode 📊", "ask": "Ask NEXUS...", "clear": "Clear Memory"
     }
 }
 cur = T[st.session_state.lang]
 
-# --- משתני עיצוב פרימיום (SpaceX/Tesla Vibe) ---
+# --- משתני עיצוב דינמיים לפי מצב לילה/יום ---
 if st.session_state.dark_mode:
-    bg_overlay = "rgba(5, 8, 15, 0.88)"
-    glass_bg = "rgba(15, 20, 30, 0.5)"
-    text_color = "#e2e8f0"
-    accent_color = "#00f2fe"
-    accent_grad = "linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)"
-    border_color = "rgba(0, 242, 254, 0.15)"
+    overlay = "rgba(15, 23, 42, 0.85)"
+    text_color = "#f8fafc"
+    glass_bg = "rgba(30, 41, 59, 0.65)"
+    border_color = "rgba(255, 255, 255, 0.1)"
+    accent_gradient = "linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%)"
+    accent_shadow = "rgba(139, 92, 246, 0.4)"
 else:
-    bg_overlay = "rgba(248, 250, 252, 0.85)"
-    glass_bg = "rgba(255, 255, 255, 0.6)"
+    overlay = "rgba(240, 245, 255, 0.85)"
     text_color = "#0f172a"
-    accent_color = "#2563eb"
-    accent_grad = "linear-gradient(135deg, #2563eb 0%, #3b82f6 100%)"
-    border_color = "rgba(37, 99, 235, 0.2)"
+    glass_bg = "rgba(255, 255, 255, 0.75)"
+    border_color = "rgba(255, 255, 255, 0.5)"
+    accent_gradient = "linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%)"
+    accent_shadow = "rgba(99, 102, 241, 0.3)"
 
-# --- CSS מפלצתי - UI של חללית ---
+bg_css = f"background-image: linear-gradient({overlay}, {overlay}), url('{BG_IMAGE_URL}'); background-size: cover; background-position: center; background-attachment: fixed;"
+
+# --- קוד ה-CSS המקיף והמשודרג ---
 st.markdown(f"""
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;600;800;900&family=Inter:wght@400;700&display=swap');
     
-    html, body, [class*="css"] {{ font-family: 'Heebo', sans-serif !important; }}
-    header[data-testid="stHeader"] {{ display: none !important; }}
-    .stAppDeployButton {{display: none;}} footer {{display: none !important;}} 
+    /* Global Settings & Animations */
+    html, body, [class*="css"] {{ font-family: 'Heebo', 'Inter', sans-serif !important; }}
+    header[data-testid="stHeader"] {{ background: transparent !important; }}
+    .stAppDeployButton {{display: none;}} footer {{visibility: hidden !important;}} 
+    html, body {{ max-width: 100vw; overflow-x: hidden; }}
+    .stApp {{ {bg_css} color: {text_color}; }}
     
-    .stApp {{ 
-        background-image: linear-gradient({bg_overlay}, {bg_overlay}), url('{BG_IMAGE_URL}'); 
-        background-size: cover; background-position: center; background-attachment: fixed; color: {text_color}; 
-    }}
+    @keyframes slideUpFade {{ from {{ opacity: 0; transform: translateY(20px); }} to {{ opacity: 1; transform: translateY(0); }} }}
     
     {" .main, [data-testid='stSidebar'], [data-testid='stChatMessageContent'] { direction: rtl !important; text-align: right !important; } " if st.session_state.lang == "עברית" else ""}
     
-    /* הנדסת גלילה מודרנית */
-    ::-webkit-scrollbar {{ width: 4px; height: 4px; }}
+    /* Scrollbar Premium */
+    ::-webkit-scrollbar {{ width: 6px; height: 6px; }}
     ::-webkit-scrollbar-track {{ background: transparent; }}
-    ::-webkit-scrollbar-thumb {{ background: {accent_color}; border-radius: 10px; opacity: 0.5; }}
-    
-    /* Bento-Box / Glass Cards התאמה מושלמת למכולות */
-    div[data-testid="stMetric"], .stChatMessage, .stForm, div[data-testid="stExpander"], div[data-testid="stDataFrame"], .task-card {{ 
+    ::-webkit-scrollbar-thumb {{ background: {accent_shadow}; border-radius: 10px; }}
+    ::-webkit-scrollbar-thumb:hover {{ background: #8b5cf6; }}
+
+    /* Glassmorphism Cards (Metrics, Chat, Forms) */
+    div[data-testid="stMetric"], .stChatMessage, .stForm, div[data-testid="stExpander"] {{ 
         background: {glass_bg} !important; 
-        backdrop-filter: blur(25px) saturate(180%) !important; -webkit-backdrop-filter: blur(25px);
+        backdrop-filter: blur(20px) saturate(180%) !important; 
+        -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
         border: 1px solid {border_color} !important; 
-        border-radius: 16px !important; 
-        box-shadow: 0 8px 32px rgba(0,0,0, 0.2), inset 0 1px 1px rgba(255,255,255,0.05) !important; 
-        padding: 24px; transition: all 0.3s ease; color: {text_color} !important; 
+        border-radius: 24px !important; 
+        box-shadow: 0 10px 30px rgba(0,0,0, 0.1) !important; 
+        padding: 20px; 
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); 
+        color: {text_color} !important; 
+        animation: slideUpFade 0.6s ease-out forwards;
     }}
     
-    div[data-testid="stMetric"]:hover, .task-card:hover {{ transform: translateY(-4px); border-color: {accent_color} !important; box-shadow: 0 15px 40px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.1) !important; }}
+    /* Hover Effects for Cards */
+    div[data-testid="stMetric"]:hover, .stForm:hover {{ 
+        transform: translateY(-8px) scale(1.01); 
+        box-shadow: 0 20px 40px {accent_shadow} !important; 
+        border-color: rgba(139, 92, 246, 0.4) !important;
+    }}
     
-    /* טיפוגרפיה של מדדים - סגנון דאטה אנליסט */
-    [data-testid="stMetricValue"] {{ font-family: 'JetBrains Mono', monospace !important; font-weight: 800 !important; font-size: 3.2rem !important; background: {accent_grad}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
-    [data-testid="stMetricLabel"] {{ font-size: 1.1rem !important; font-weight: 500 !important; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8 !important; }}
+    h1, h2, h3 {{ color: {text_color}; text-align: center; font-weight: 800; letter-spacing: -0.5px; }}
     
-    /* כפתורים רובוטיים מדויקים */
+    /* Buttons Premium Styling */
     .stButton>button {{ 
-        background: rgba(255,255,255,0.05) !important; color: {accent_color} !important; 
-        font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 1rem;
-        border: 1px solid {accent_color} !important; border-radius: 8px !important; 
-        padding: 10px 24px; transition: all 0.2s; text-transform: uppercase; letter-spacing: 1px;
+        background: {accent_gradient} !important; 
+        color: #ffffff !important; 
+        font-weight: 800; font-size: 1.1rem;
+        border: none; 
+        border-radius: 50px !important; 
+        width: 100%; 
+        padding: 12px;
+        box-shadow: 0 8px 20px {accent_shadow} !important; 
+        transition: all 0.3s ease !important; 
+        text-transform: uppercase; letter-spacing: 1px; 
     }}
-    .stButton>button:hover {{ background: {accent_grad} !important; color: #fff !important; box-shadow: 0 0 20px {border_color} !important; transform: scale(1.02); }}
-    
-    /* שדות קלט בסגנון טרמינל */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {{ 
-        background: rgba(0,0,0,0.3) !important; border: 1px solid rgba(255,255,255,0.1) !important; color: {text_color} !important; border-radius: 8px !important; font-family: 'Heebo';
+    .stButton>button:hover {{ 
+        transform: translateY(-4px) scale(1.02) !important; 
+        box-shadow: 0 12px 25px rgba(139, 92, 246, 0.6) !important; 
+        filter: brightness(1.1);
     }}
-    .stTextInput>div>div>input:focus {{ border-color: {accent_color} !important; box-shadow: 0 0 10px rgba(0,242,254,0.2) !important; }}
+    .stButton>button:active {{ transform: translateY(0) scale(0.98) !important; }}
     
-    /* תיבת הודעות למעלה */
-    .hud-header {{ display: flex; justify-content: space-between; align-items: flex-end; border-bottom: 1px solid {border_color}; padding-bottom: 20px; margin-bottom: 30px; }}
-    .hud-title {{ font-family: 'JetBrains Mono', monospace; font-size: 1.8rem; font-weight: 800; margin: 0; color: {text_color}; letter-spacing: 2px; }}
-    .hud-subtitle {{ font-size: 1rem; color: #94a3b8; font-weight: 400; margin: 0; }}
+    /* Typography inside elements */
+    [data-testid="stChatMessageContent"] p, [data-testid="stChatMessageContent"] li {{ font-size: {st.session_state.font_size} !important; color: {text_color}; line-height: 1.6; }}
+    [data-testid="stMetricValue"] {{ font-family: 'Inter', sans-serif !important; font-weight: 900 !important; font-size: 2.5rem !important; background: {accent_gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; }}
     
-    /* צ'אט */
-    .stChatInputContainer {{ background: {glass_bg} !important; border-radius: 16px !important; border: 1px solid {border_color} !important; backdrop-filter: blur(20px) !important; }}
-    [data-testid="stChatMessageContent"] p {{ font-size: {st.session_state.font_size} !important; line-height: 1.7; }}
+    /* Chat Input Bar */
+    .stChatInputContainer {{ background: {glass_bg} !important; border-radius: 30px !important; border: 1px solid {border_color} !important; backdrop-filter: blur(20px) !important; padding: 5px 10px; box-shadow: 0 10px 30px rgba(0,0,0,0.1) !important; }}
     
+    .greeting-box {{ text-align: center; font-size: 2.2rem; font-weight: 900; color: {text_color}; margin-top: -20px; margin-bottom: 30px; letter-spacing: -1px; text-shadow: 0px 4px 15px rgba(0,0,0,0.1); animation: slideUpFade 0.8s ease-out forwards; }}
     </style>
 """, unsafe_allow_html=True)
 
-# --- שליפת נתונים מקשמון (Cache) ---
 @st.cache_data(ttl=60)
 def fetch_grades_cached(): return get_all_grades()
+
 @st.cache_data(ttl=60)
 def fetch_tasks_cached(): return get_all_tasks()
 
 df = fetch_grades_cached()
 tasks_df = fetch_tasks_cached()
 
-# --- מנגנון המקצועות ---
+# --- מנגנון המקצועות החכם (מתורגם) ---
 if st.session_state.lang == "עברית":
-    base_subjects = ["כללי", "מתמטיקה", "מדעי המחשב", "אנגלית", "פיזיקה", "כתיבה אקדמית", "פייתון", "SQL", "Power BI"]
-    add_new_str = "➕ מקצוע חדש..."
+    base_subjects = ["כללי", "מתמטיקה", "מדעי המחשב", "אנגלית", "פיזיקה", "כתיבה אקדמית"]
+    add_new_str = "➕ הוסף מקצוע חדש..."
 else:
-    base_subjects = ["General", "Math", "CS", "English", "Physics", "Python", "SQL", "Power BI"]
-    add_new_str = "➕ New Subject..."
+    base_subjects = ["General", "Math", "Computer Science", "English", "Physics", "Academic Writing"]
+    add_new_str = "➕ Add New Subject..."
 
 db_subjects = df['subject'].unique().tolist() if not df.empty else []
 temp_subjects = set(base_subjects + db_subjects)
-for s in ["➕ מקצוע חדש...", "➕ New Subject...", "System_Init"]: temp_subjects.discard(s)
+if "➕ הוסף מקצוע חדש..." in temp_subjects: temp_subjects.remove("➕ הוסף מקצוע חדש...")
+if "➕ Add New Subject..." in temp_subjects: temp_subjects.remove("➕ Add New Subject...")
+if "System_Init" in temp_subjects: temp_subjects.remove("System_Init")
+
 all_subjects = sorted(list(temp_subjects)) + [add_new_str]
-idx_general = all_subjects.index("כללי") if "כללי" in all_subjects else 0
 
-# --- תפריט צדדי חכם (Sidebar Config) ---
+idx_math = all_subjects.index("מתמטיקה") if "מתמטיקה" in all_subjects else (all_subjects.index("Math") if "Math" in all_subjects else 0)
+idx_general = all_subjects.index("כללי") if "כללי" in all_subjects else (all_subjects.index("General") if "General" in all_subjects else 0)
+
+# --- תפריט צד משודרג ---
 with st.sidebar:
-    st.markdown(f"<h1 style='font-family: JetBrains Mono; text-align: center; color: {accent_color}; font-size: 2.5rem; text-shadow: 0 0 15px {border_color}; margin-bottom: 30px;'>NEXUS<span style='color: #fff;'>_OS</span></h1>", unsafe_allow_html=True)
-    
-    lang = st.radio("System Protocol", ["עברית", "English"], horizontal=True, label_visibility="collapsed")
+    st.markdown(f"<h2 style='background: {accent_gradient}; -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; font-weight: 900; text-align: center; margin-bottom: 20px;'>NEXUS OS</h2>", unsafe_allow_html=True)
+    lang = st.radio("שפת ממשק / Language", ["עברית", "English"], horizontal=True, label_visibility="collapsed")
     if lang != st.session_state.lang: st.session_state.lang = lang; st.rerun()
-    st.session_state.dark_mode = st.toggle("Tactical Dark Mode", value=st.session_state.dark_mode)
-    analyst_on = st.toggle("Analyst Core 📊", value=True)
+    st.session_state.dark_mode = st.toggle("🌙 מצב לילה" if st.session_state.lang == "עברית" else "🌙 Night Mode", value=st.session_state.dark_mode)
     st.divider()
-    
-    st.markdown("<p style='font-family: JetBrains Mono; font-size: 0.9rem; color: #94a3b8; margin-bottom: 5px;'>// DATA_INGESTION</p>", unsafe_allow_html=True)
-    upload_sub = st.selectbox("Target Node:", all_subjects[:-1], index=idx_general, label_visibility="collapsed")
-    up = st.file_uploader("Drop Files", type=None, label_visibility="collapsed")
-    if up and st.button("EXECUTE SCAN", use_container_width=True):
+    analyst_on = st.toggle(cur["analyst"], value=True)
+    st.markdown("### 📚 ניהול חומר לימודי" if st.session_state.lang == "עברית" else "### 📚 Study Materials")
+    upload_sub = st.selectbox("בחר מקצוע:" if st.session_state.lang == "עברית" else "Select Subject:", all_subjects[:-1], index=idx_math)
+    up = st.file_uploader("העלאה" if st.session_state.lang == "עברית" else "Upload", type=None)
+    if up and st.button("סרוק" if st.session_state.lang == "עברית" else "Scan"):
         st.session_state.file_contexts[upload_sub] = extract_text_from_file(up)
-        st.success(f"Ingested -> {upload_sub}")
+        st.success(f"נטען ל: {upload_sub}")
 
-# --- HUD Header (Top Bar) ---
-st.markdown(f"""
-    <div class="hud-header">
-        <div>
-            <h1 class="hud-title">{'NEXUS COMMAND' if st.session_state.lang == 'English' else 'מרכז פיקוד NEXUS'}</h1>
-            <p class="hud-subtitle">{greeting_text} | System Time: {datetime.datetime.now(ZoneInfo("Asia/Jerusalem")).strftime("%H:%M")}</p>
-        </div>
-    </div>
-""", unsafe_allow_html=True)
+st.markdown(f"<div class='greeting-box'>{greeting_text}</div>", unsafe_allow_html=True)
 
-# --- תפריט ניווט הולוגרפי עילי ---
+# --- תפריט ניווט צף ומרכזי (Floating Dock Style) ---
 menu = option_menu(None, [cur["m1"], cur["m2"], cur["m3"], cur["m4"], cur["m5"]], 
-                   icons=["grid-1x2", "cpu", "server", "check2-square", "sliders"], 
+                   icons=["grid-1x2-fill", "chat-right-quote-fill", "hdd-stack-fill", "calendar2-check-fill", "sliders"], 
                    orientation="horizontal",
                    styles={
-                       "container": {"padding": "5px!important", "background": "rgba(0,0,0,0.3)", "backdrop-filter": "blur(10px)", "border": f"1px solid {border_color}", "border-radius": "12px", "margin-bottom": "40px"},
-                       "icon": {"color": "#94a3b8", "font-size": "1.1rem"}, 
-                       "nav-link": {"font-family": "JetBrains Mono", "font-size": "0.95rem", "font-weight": "600", "text-align": "center", "margin":"0px", "color": "#94a3b8", "border-radius": "8px", "transition": "0.2s"},
-                       "nav-link-selected": {"background": "rgba(255,255,255,0.1)", "color": accent_color, "border": f"1px solid {accent_color}", "box-shadow": f"inset 0 0 10px {border_color}"}
+                       "container": {
+                           "padding": "8px!important", 
+                           "background": glass_bg, 
+                           "backdrop-filter": "blur(25px)", 
+                           "border": f"1px solid {border_color}",
+                           "border-radius": "40px", 
+                           "box-shadow": "0 15px 35px rgba(0,0,0,0.15)", 
+                           "margin-bottom": "40px",
+                           "max-width": "900px",
+                           "margin-left": "auto",
+                           "margin-right": "auto"
+                       },
+                       "icon": {"color": text_color, "font-size": "1.3rem"}, 
+                       "nav-link": {
+                           "font-size": "1.1rem", "font-weight": "600",
+                           "text-align": "center", "margin":"0px 5px", 
+                           "color": text_color, "border-radius": "30px",
+                           "transition": "all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1)"
+                       },
+                       "nav-link-selected": {
+                           "background": accent_gradient, 
+                           "font-weight": "800", 
+                           "color": "#ffffff", 
+                           "box-shadow": f"0 8px 20px {accent_shadow}",
+                           "transform": "scale(1.05)"
+                       }
                    })
 
 df_valid = df[df['topic'] != 'System_Init'] if not df.empty else df
-total_credits = df_valid['credits'].sum() if not df_valid.empty and 'credits' in df_valid.columns else 0.0
-weighted_avg = (df_valid['grade'] * df_valid['credits']).sum() / total_credits if total_credits > 0 else 0.0
+total_credits = 0.0
+weighted_avg = 0.0
+if not df_valid.empty:
+    if 'credits' not in df_valid.columns: df_valid['credits'] = 1.0
+    total_credits = df_valid['credits'].sum()
+    if total_credits > 0:
+        weighted_avg = (df_valid['grade'] * df_valid['credits']).sum() / total_credits
 
-# ==========================================
-# --- MODULE 1: COMMAND CENTER (Bento Box) ---
-# ==========================================
+# --- עמוד: מרכז אקדמי ---
 if menu == cur["m1"]:
-    # שורה 1: מטריקות
-    m1, m2, m3, m4 = st.columns(4)
-    m1.metric(cur["avg"], f"{weighted_avg:.2f}") 
-    m2.metric(cur["count"], len(df_valid))
-    m3.metric(cur["cred"], f"{total_credits:.1f}")
-    m4.metric("משימות פתוחות" if st.session_state.lang == "עברית" else "Open Tasks", len(tasks_df))
-    
-    st.write("") # Spacer
-    
-    # שורה 2: Bento Box Layout
-    col_chart, col_tools = st.columns([2.5, 1])
-    
-    with col_chart:
-        st.markdown(f"<div style='background: {glass_bg}; border-radius: 16px; border: 1px solid {border_color}; padding: 20px; height: 100%;'>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='font-family: JetBrains Mono; color: #fff; font-size: 1.2rem; text-align: right; direction: rtl; border-bottom: 1px solid {border_color}; padding-bottom: 10px; margin-bottom: 15px;'>// PERFORMANCE_MATRIX</h3>", unsafe_allow_html=True)
-        if not df_valid.empty:
-            tab1, tab2 = st.tabs(["📊 Distribution", "📈 Trend"])
-            with tab1:
-                fig = px.bar(df_valid, x='subject', y='grade', color='grade', color_continuous_scale='Mint' if not st.session_state.dark_mode else 'Teal', text='grade')
-                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=text_color, font_family="JetBrains Mono", margin=dict(l=0, r=0, t=30, b=0))
-                fig.update_traces(textposition='outside')
-                st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
-            with tab2:
-                df_time = df_valid.copy().sort_values('created_at')
-                df_time['rolling'] = df_time['grade'].expanding().mean()
-                fig2 = px.line(df_time, x='created_at', y='rolling', markers=True, line_shape='spline')
-                fig2.update_traces(line_color=accent_color, marker=dict(size=8, color='#fff', line=dict(width=2, color=accent_color)))
-                fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=text_color, font_family="JetBrains Mono", margin=dict(l=0, r=0, t=30, b=0))
-                st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
-        else:
-            st.info("No data streams detected.")
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    with col_tools:
-        st.markdown(f"<div style='background: {glass_bg}; border-radius: 16px; border: 1px solid {border_color}; padding: 20px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='font-family: JetBrains Mono; color: #fff; font-size: 1.2rem; text-align: right; direction: rtl; border-bottom: 1px solid {border_color}; padding-bottom: 10px; margin-bottom: 15px;'>// DATA_ENTRY</h3>", unsafe_allow_html=True)
+    c1, c2, c3 = st.columns(3)
+    c1.metric(cur["avg"], f"{weighted_avg:.2f}") 
+    c2.metric(cur["count"], len(df_valid))
+    c3.metric("סה\"כ נ\"ז" if st.session_state.lang == "עברית" else "Total Credits", f"{total_credits:.1f}")
+    st.divider()
+    l, r = st.columns([1, 2.5])
+    with l:
+        st.markdown("### 📥 הזנת קורס חדש" if st.session_state.lang == "עברית" else "### 📥 Enter Course")
         with st.form("entry", clear_on_submit=True):
-            sel_sub = st.selectbox(cur["sub"], all_subjects, index=0, label_visibility="collapsed")
-            new_sub = st.text_input("New Subject") if sel_sub == add_new_str else ""
-            c1, c2 = st.columns(2)
-            cred = c1.number_input(cur["cred"], 0.5, 10.0, 3.0, 0.5)
-            grd = c2.number_input(cur["grd"], 0, 100, 90)
-            if st.form_submit_button(cur["sync"], use_container_width=True): 
-                f_sub = new_sub if sel_sub == add_new_str else sel_sub
-                if f_sub: save_grade(f_sub, "", grd, cred); fetch_grades_cached.clear(); st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-        
-        st.markdown(f"<div style='background: {glass_bg}; border-radius: 16px; border: 1px solid {border_color}; padding: 20px;'>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='font-family: JetBrains Mono; color: #fff; font-size: 1.2rem; text-align: right; direction: rtl; border-bottom: 1px solid {border_color}; padding-bottom: 10px; margin-bottom: 15px;'>// SIMULATION</h3>", unsafe_allow_html=True)
-        s_c = st.number_input("Future Credits", 1.0, 10.0, 3.0, key="sc")
-        s_g = st.number_input("Expected Grade", 0, 100, 90, key="sg")
-        if st.button("RUN SIMULATION", use_container_width=True):
-            n_tot = total_credits + s_c
-            n_avg = ((weighted_avg * total_credits) + (s_g * s_c)) / n_tot if n_tot > 0 else 0
-            st.success(f"Projected GPA: {n_avg:.2f}")
-        st.markdown("</div>", unsafe_allow_html=True)
+            selected_sub = st.selectbox(cur["sub"], all_subjects, index=idx_math)
+            new_sub_input = st.text_input("שם מקצוע חדש:" if st.session_state.lang == "עברית" else "New Subject:") if selected_sub == add_new_str else ""
+            c = st.number_input(cur["cred"], min_value=0.5, max_value=10.0, value=3.0, step=0.5)
+            g = st.number_input(cur["grd"], min_value=0, max_value=100, value=90)
+            if st.form_submit_button(cur["sync"]): 
+                final_subject = new_sub_input if selected_sub == add_new_str else selected_sub
+                if final_subject: save_grade(final_subject, "", g, c); fetch_grades_cached.clear(); st.rerun()
+        with st.expander("מחשבון חיזוי ציון" if st.session_state.lang == "עברית" else "Grade Predictor"):
+            sim_c = st.number_input("נ\"ז" if st.session_state.lang == "עברית" else "Credits", 1.0, 10.0, 3.0)
+            sim_g = st.number_input("ציון" if st.session_state.lang == "עברית" else "Grade", 0, 100, 90)
+            if st.button("חשב" if st.session_state.lang == "עברית" else "Calculate"):
+                new_tot = total_credits + sim_c
+                new_avg = ((weighted_avg * total_credits) + (sim_g * sim_c)) / new_tot if new_tot > 0 else 0
+                st.success(f"ממוצע צפוי: {new_avg:.2f}")
+    with r:
+        if not df_valid.empty:
+            tab1, tab2, tab3 = st.tabs(["גרף ציונים", "עוגת נ\"ז", "מגמת זמן"] if st.session_state.lang == "עברית" else ["Grades", "Credits", "Trend"])
+            with tab1:
+                fig = px.bar(df_valid, x='subject', y='grade', color='grade', color_continuous_scale='Purpor' if st.session_state.dark_mode else 'Blues')
+                fig.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=text_color, font_family="Heebo")
+                st.plotly_chart(fig, use_container_width=True)
+            with tab2:
+                fig2 = px.pie(df_valid, values='credits', names='subject', hole=0.45, color_discrete_sequence=px.colors.qualitative.Pastel)
+                fig2.update_layout(paper_bgcolor='rgba(0,0,0,0)', font_color=text_color, font_family="Heebo")
+                st.plotly_chart(fig2, use_container_width=True)
+            with tab3:
+                df_time = df_valid.copy().sort_values('created_at')
+                df_time['rolling_avg'] = df_time['grade'].expanding().mean()
+                fig3 = px.line(df_time, x='created_at', y='rolling_avg', markers=True, line_shape='spline')
+                fig3.update_traces(line_color='#8b5cf6', marker=dict(size=10, color='#3b82f6'))
+                fig3.update_layout(paper_bgcolor='rgba(0,0,0,0)', plot_bgcolor='rgba(0,0,0,0)', font_color=text_color, font_family="Heebo")
+                st.plotly_chart(fig3, use_container_width=True)
 
-# ==========================================
-# --- MODULE 2: AI TERMINAL ---
-# ==========================================
+# --- עמוד: בינה מלאכותית ---
 elif menu == cur["m2"]:
+    st.markdown(f"<h1>{'🧠 NEXUS AI MENTOR' if not analyst_on else '💻 DATA ANALYST AI'}</h1>", unsafe_allow_html=True)
     if not st.session_state.chat_history:
         db_history = get_persistent_chat_history()
         st.session_state.chat_history = [{"role": m["role"], "content": m["content"]} for m in db_history]
-    
-    colA, colB = st.columns([4, 1])
-    with colA: chat_sub = st.selectbox("Focus Protocol:", all_subjects[:-1], index=idx_general, label_visibility="collapsed")
+    colA, colB = st.columns([3, 1])
+    with colA: chat_sub = st.selectbox("נושא למיקוד:" if st.session_state.lang == "עברית" else "Focus Subject:", all_subjects[:-1], index=idx_general)
     with colB: 
-        if st.button("INITIATE QUIZ 📝", use_container_width=True):
+        if st.button("📝 בחן אותי" if st.session_state.lang == "עברית" else "📝 Quiz Me"):
             if chat_sub in st.session_state.file_contexts:
-                ctx = st.session_state.file_contexts[chat_sub]
+                context_for_bot = st.session_state.file_contexts[chat_sub]
                 placeholder = st.empty()
-                res = ""
-                for chunk in get_ai_response_stream(chat_sub, "ייצר לי מבחן אקדמי ברמה גבוהה.", [], ctx, st.session_state.lang, analyst_on, is_quiz=True):
-                    res += chunk
-                    placeholder.markdown(f'<div style="background: rgba(0,255,255,0.05); padding:20px; border-radius:12px; border-left: 4px solid {accent_color}; text-align: right; direction: rtl;">{res}</div>', unsafe_allow_html=True)
-    
-    chat_container = st.container(height=550)
+                full_res = ""
+                for chunk in get_ai_response_stream(chat_sub, "ייצר לי מבחן.", [], context_for_bot, st.session_state.lang, analyst_on, is_quiz=True):
+                    full_res += chunk
+                    placeholder.markdown(f'<div style="text-align: right; direction: rtl; background: {glass_bg}; padding:20px; border-radius:15px; border: 1px solid {accent_shadow};">{full_res}</div>', unsafe_allow_html=True)
+    chat_container = st.container(height=500)
     with chat_container:
         for m in st.session_state.chat_history:
-            bg = "rgba(0, 242, 254, 0.05)" if m["role"] == "user" else "transparent"
-            border = f"border-right: 3px solid {accent_color};" if m["role"] == "user" else f"border-left: 3px solid #8b5cf6;"
+            bubble_color = "rgba(59, 130, 246, 0.15)" if m["role"] == "user" else "transparent"
+            border_radius = "20px 20px 5px 20px" if m["role"] == "user" else "20px 20px 20px 5px"
             with st.chat_message(m["role"]): 
-                st.markdown(f'<div style="text-align: right; direction: rtl; background: {bg}; {border} padding: 15px; border-radius: 8px;">{m["content"]}</div>', unsafe_allow_html=True)
-                
+                st.markdown(f'<div style="text-align: right; direction: rtl; background: {bubble_color}; padding: 15px; border-radius: {border_radius};">{m["content"]}</div>', unsafe_allow_html=True)
     if p := st.chat_input(cur["ask"]):
         components.html("""<script>window.parent.document.activeElement.blur();</script>""", height=0, width=0)
         st.session_state.chat_history.append({"role": "user", "content": p})
         save_chat_message("user", p)
-        with chat_container.chat_message("user"): 
-            st.markdown(f'<div style="text-align: right; direction: rtl; background: rgba(0, 242, 254, 0.05); border-right: 3px solid {accent_color}; padding: 15px; border-radius: 8px;">{p}</div>', unsafe_allow_html=True)
+        with chat_container.chat_message("user"): st.markdown(f'<div style="text-align: right; direction: rtl; background: rgba(59, 130, 246, 0.15); padding: 15px; border-radius: 20px 20px 5px 20px;">{p}</div>', unsafe_allow_html=True)
         with chat_container.chat_message("assistant"):
             placeholder = st.empty()
-            res = ""
-            ctx = st.session_state.file_contexts.get(chat_sub, "")
-            for chunk in get_ai_response_stream(chat_sub, p, st.session_state.chat_history[:-1], ctx, st.session_state.lang, analyst_on):
-                res += chunk
-                placeholder.markdown(f'<div style="text-align: right; direction: rtl; border-left: 3px solid #8b5cf6; padding: 15px;">{res}</div>', unsafe_allow_html=True)
-        st.session_state.chat_history.append({"role": "assistant", "content": res})
-        save_chat_message("assistant", res)
+            full_res = ""
+            context_for_bot = st.session_state.file_contexts.get(chat_sub, "")
+            for chunk in get_ai_response_stream(chat_sub, p, st.session_state.chat_history[:-1], context_for_bot, st.session_state.lang, analyst_on):
+                full_res += chunk
+                placeholder.markdown(f'<div style="text-align: right; direction: rtl; padding: 15px;">{full_res}</div>', unsafe_allow_html=True)
+        st.session_state.chat_history.append({"role": "assistant", "content": full_res})
+        save_chat_message("assistant", full_res)
 
-# ==========================================
-# --- MODULE 3: DATA VAULT ---
-# ==========================================
+# --- עמוד: מסד נתונים ---
 elif menu == cur["m3"]:
-    st.markdown(f"<h3 style='font-family: JetBrains Mono; color: {accent_color}; margin-bottom: 20px;'>// SECURE_DATA_VAULT</h3>", unsafe_allow_html=True)
-    if not df_valid.empty:
-        col1, col2 = st.columns([8, 2])
-        with col2:
+    col1, col2 = st.columns([3, 1])
+    with col1: st.markdown("<h1>🗄️ System Vault</h1>", unsafe_allow_html=True)
+    with col2:
+        if not df_valid.empty:
             buffer = io.BytesIO()
             with pd.ExcelWriter(buffer, engine='openpyxl') as writer: df_valid.to_excel(writer, index=False)
-            st.download_button(label="EXPORT .XLSX", data=buffer.getvalue(), file_name="NEXUS_DB.xlsx", use_container_width=True)
-        
-        st.markdown(f"""<style>[data-testid="stDataFrame"] {{ background: rgba(0,0,0,0.4); border: 1px solid {border_color}; border-radius: 12px; }}</style>""", unsafe_allow_html=True)
-        st.dataframe(df_valid, use_container_width=True, height=600) 
+            st.download_button(label="📥 הורד כ-Excel", data=buffer.getvalue(), file_name="NEXUS_Grades.xlsx")
+    
+    st.markdown(f"""
+        <style>
+        [data-testid="stDataFrame"] {{ border-radius: 20px; overflow: hidden; border: 1px solid {border_color}; box-shadow: 0 10px 30px rgba(0,0,0,0.1); }}
+        </style>
+    """, unsafe_allow_html=True)
+    st.dataframe(df_valid, use_container_width=True, height=500) 
 
-# ==========================================
-# --- MODULE 4: OBJECTIVES (Task Board) ---
-# ==========================================
+# --- עמוד: לוח משימות ---
 elif menu == cur["m4"]:
+    st.markdown("<h1>📌 לוח משימות אקטיבי</h1>" if st.session_state.lang == "עברית" else "<h1>📌 Active Task Board</h1>", unsafe_allow_html=True)
     colA, colB = st.columns([1, 2.5])
     with colA:
-        st.markdown(f"<div style='background: {glass_bg}; border-radius: 16px; border: 1px solid {border_color}; padding: 20px;'>", unsafe_allow_html=True)
-        st.markdown(f"<h3 style='font-family: JetBrains Mono; color: #fff; font-size: 1.2rem; text-align: right; direction: rtl; border-bottom: 1px solid {border_color}; padding-bottom: 10px; margin-bottom: 15px;'>// ADD_OBJECTIVE</h3>", unsafe_allow_html=True)
         with st.form("new_task", clear_on_submit=True):
-            t_title = st.text_input("Objective Detail", label_visibility="collapsed", placeholder="Enter task...")
-            t_sub = st.selectbox(cur["sub"], all_subjects[:-1], label_visibility="collapsed")
-            t_date = st.date_input("Deadline", label_visibility="collapsed")
-            if st.form_submit_button("DEPLOY TASK", use_container_width=True): 
-                save_task(t_title, t_sub, t_date); fetch_tasks_cached.clear(); st.rerun()
-        st.markdown("</div>", unsafe_allow_html=True)
-        
+            t_title = st.text_input("תיאור המשימה" if st.session_state.lang == "עברית" else "Task Description")
+            t_sub = st.selectbox(cur["sub"], all_subjects[:-1])
+            t_date = st.date_input("תאריך יעד" if st.session_state.lang == "עברית" else "Due Date")
+            if st.form_submit_button("הוסף משימה ➕"): save_task(t_title, t_sub, t_date); fetch_tasks_cached.clear(); st.rerun()
     with colB:
         if not tasks_df.empty:
             for index, row in tasks_df.iterrows():
                 days = (pd.to_datetime(row['due_date']).date() - datetime.date.today()).days
-                status_color = "#00f2fe" if days > 3 else ("#f59e0b" if days >= 0 else "#ef4444")
-                pulse_css = "box-shadow: 0 0 15px rgba(239, 68, 68, 0.4);" if days < 0 else ""
-                
+                status_color = "#10b981" if days > 3 else ("#f59e0b" if days >= 0 else "#ef4444")
                 st.markdown(f"""
-                    <div class="task-card" style="border-right: 4px solid {status_color}; margin-bottom: 15px; display: flex; justify-content: space-between; align-items: center; {pulse_css}">
-                        <div style="direction: rtl; text-align: right; width: 100%;">
-                            <span style="font-size: 1.3rem; font-weight: 700; color: #fff;">{row['title']}</span>
-                            <br><span style="font-family: JetBrains Mono; font-size: 0.85rem; color: {status_color}; text-transform: uppercase;">NODE: {row['subject']} | T-MINUS: {days} DAYS</span>
+                    <div style="background: {glass_bg}; backdrop-filter: blur(15px); border-right: 6px solid {status_color}; border-radius: 15px; padding: 15px 25px; margin-bottom: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.05); display: flex; justify-content: space-between; align-items: center;">
+                        <div style="direction: rtl; text-align: right;">
+                            <span style="font-size: 1.2rem; font-weight: 800; color: {text_color};">{row['title']}</span>
+                            <br><span style="font-size: 0.9rem; color: #64748b; font-weight: 600;">📚 {row['subject']} • ⏳ נותרו {days} ימים</span>
                         </div>
                     </div>
                 """, unsafe_allow_html=True)
-                if st.button(f"MARK COMPLETE", key=f"d_{row['id']}"): 
-                    delete_task(row['id']); fetch_tasks_cached.clear(); st.rerun()
+                if st.button("סמן כבוצע ✔️", key=f"d_{row['id']}"): delete_task(row['id']); fetch_tasks_cached.clear(); st.rerun()
 
-# ==========================================
-# --- MODULE 5: SYSTEM CONFIG ---
-# ==========================================
+# --- עמוד: הגדרות ---
 elif menu == cur["m5"]:
-    st.markdown(f"<h3 style='font-family: JetBrains Mono; color: {accent_color}; margin-bottom: 20px;'>// SYSTEM_CONFIGURATION</h3>", unsafe_allow_html=True)
-    
-    st.markdown(f"<div style='background: {glass_bg}; border-radius: 16px; border: 1px solid {border_color}; padding: 30px; margin-bottom: 20px;'>", unsafe_allow_html=True)
-    font_size_map = {"Small": "0.9rem", "Standard": "1.1rem", "Large": "1.3rem"}
+    st.markdown(f"<h1>⚙️ {cur['m5']} מערכת</h1>", unsafe_allow_html=True)
+    font_size_map = {"קטן": "0.9rem", "רגיל": "1.1rem", "גדול": "1.3rem"} if st.session_state.lang == "עברית" else {"Small": "0.9rem", "Normal": "1.1rem", "Large": "1.3rem"}
     cur_size = [k for k, v in font_size_map.items() if v == st.session_state.font_size][0]
-    new_size = st.select_slider("UI SCALE", options=list(font_size_map.keys()), value=cur_size)
+    new_size = st.select_slider("גודל טקסט במערכת" if st.session_state.lang == "עברית" else "System Font Size", options=list(font_size_map.keys()), value=cur_size)
     if font_size_map[new_size] != st.session_state.font_size: st.session_state.font_size = font_size_map[new_size]; st.rerun()
-    st.markdown("</div>", unsafe_allow_html=True)
-    
+    st.divider()
     c1, c2, c3 = st.columns(3)
     with c1:
-        if st.button("PURGE AI MEMORY", use_container_width=True): clear_chat_history(); st.session_state.chat_history = []; st.rerun()
+        if st.button("🗑️ נקה היסטוריית צ'אט"): clear_chat_history(); st.session_state.chat_history = []; st.rerun()
     with c2:
-        if st.button("FLUSH INGESTED FILES", use_container_width=True): st.session_state.file_contexts = {}; st.rerun()
+        if st.button("🧹 נקה קבצים מהסורק"): st.session_state.file_contexts = {}; st.rerun()
     with c3:
-        st.markdown("""<style>div.stButton > button:last-child { border-color: #ef4444 !important; color: #ef4444 !important; } div.stButton > button:last-child:hover { background: rgba(239,68,68,0.2) !important; }</style>""", unsafe_allow_html=True)
-        if st.button("INITIATE FACTORY RESET", use_container_width=True): clear_db(); fetch_grades_cached.clear(); st.rerun()
+        if st.button("🚨 איפוס מסד נתונים מלא (Danger)"): clear_db(); fetch_grades_cached.clear(); st.rerun()
