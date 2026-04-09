@@ -37,7 +37,7 @@ if not st.session_state.authenticated:
         st.markdown("<div class='lock-container'><h1 style='color:white; text-shadow: 0 4px 15px rgba(0,0,0,0.4); font-size:3.5rem;'>NEXUS</h1><p style='color:white; font-size:1.2rem; font-weight:bold;'>קוד גישה</p>", unsafe_allow_html=True)
         components.html("""<script>setTimeout(function() { var inputs = window.parent.document.querySelectorAll('input[type="password"]'); for(var i=0; i<inputs.length; i++){ inputs[i].setAttribute('inputmode', 'numeric'); inputs[i].setAttribute('pattern', '[0-9]*'); } }, 500);</script>""", height=0)
         pwd = st.text_input("", type="password", placeholder="****", max_chars=4, label_visibility="collapsed")
-        if pwd == "7707": st.session_state.authenticated = True; st.rerun()
+        if pwd == "5050": st.session_state.authenticated = True; st.rerun()
         elif len(pwd) == 4 and pwd != "5050": st.error("קוד שגוי.")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
