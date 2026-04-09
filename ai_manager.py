@@ -25,14 +25,15 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         
-        # בחירת המודל הכי מהיר וחכם הזמין
-        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
-        model_name = next((m for m in available_models if "flash" in m), available_models[0])
+        # --- התיקון הסופי והמוחלט ---
+        # במקום לתת לקוד לבחור אוטומטית את המודל הכי חדש (שקורס עם הספרייה),
+        # אנחנו מקבעים אותו ספציפית למודל 1.5-flash. המודל הזה תומך במילה google_search_retrieval ועובד מושלם.
+        model_name = "models/gemini-1.5-flash"
         
-        # 🌐 חיבור חכם לאינטרנט בלייב: התיקון הסופי למבנה שה-API דורש
+        # 🌐 חיבור חכם לאינטרנט בלייב
         model = genai.GenerativeModel(
             model_name=model_name,
-            tools=[{"google_search": {}}]
+            tools='google_search_retrieval'
         )
         
         history = []
