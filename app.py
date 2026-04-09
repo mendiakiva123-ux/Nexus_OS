@@ -12,7 +12,7 @@ from ai_manager import get_ai_response_stream, extract_text_from_file
 # --- הגדרות ליבה ---
 st.set_page_config(page_title="NEXUS CORE", page_icon="💎", layout="wide", initial_sidebar_state="expanded")
 
-# תמונת רקע 4K איכותית של ספרייה אקדמית
+# תמונת רקע 
 BG_IMAGE_URL = "https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2560&auto=format&fit=crop"
 
 # --- מסך נעילה חכם ---
@@ -38,7 +38,7 @@ if not st.session_state.authenticated:
         components.html("""<script>setTimeout(function() { var inputs = window.parent.document.querySelectorAll('input[type="password"]'); for(var i=0; i<inputs.length; i++){ inputs[i].setAttribute('inputmode', 'numeric'); inputs[i].setAttribute('pattern', '[0-9]*'); } }, 500);</script>""", height=0)
         pwd = st.text_input("", type="password", placeholder="****", max_chars=4, label_visibility="collapsed")
         if pwd == "7707": st.session_state.authenticated = True; st.rerun()
-        elif len(pwd) == 4 and pwd != "7707": st.error("קוד שגוי.")
+        elif len(pwd) == 4 and pwd != "5050": st.error("קוד שגוי.")
         st.markdown("</div>", unsafe_allow_html=True)
     st.stop()
 
