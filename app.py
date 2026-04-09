@@ -70,7 +70,7 @@ greeting_text = get_greeting(st.session_state.lang)
 # מילון השפות
 T = {
     "עברית": {
-        "title": "NEXUS ACADEMY", "m1": "מרכז אקדמי", "m2": "מנטור AI", "m3": "מסד נתונים", "m4": "לוח משימות 📅", "m5": "הגדרות",
+        "title": "NEXUS ACADEMY", "m1": "מרכז אקדמי", "m2": "צ'אט AI", "m3": "מסד נתונים", "m4": "לוח משימות 📅", "m5": "הגדרות",
         "avg": "ממוצע משוקלל", "count": "קורסים", "sub": "מקצוע", "grd": "ציון", "cred": "נ\"ז", "sync": "שמור נתונים",
         "analyst": "מצב דאטה אנליסט 📊", "ask": "שאל את הבוט...", "clear": "נקה זיכרון"
     },
@@ -139,7 +139,7 @@ with st.sidebar:
     st.markdown(f"<h2>NEXUS OS</h2>", unsafe_allow_html=True)
     lang = st.radio("שפת ממשק / Language", ["עברית", "English"], horizontal=True, label_visibility="collapsed")
     if lang != st.session_state.lang: st.session_state.lang = lang; st.rerun()
-    st.session_state.dark_mode = st.toggle("🌙 מצב לילה" if st.session_state.lang == "עברית" else "🌙 Dark Mode", value=st.session_state.dark_mode)
+    st.session_state.dark_mode = st.toggle("🌙 מצב לילה" if st.session_state.lang == "עברית" else "🌙 Night Mode", value=st.session_state.dark_mode)
     st.divider()
     analyst_on = st.toggle(cur["analyst"], value=True)
     st.markdown("### 📚 ניהול חומר לימודי" if st.session_state.lang == "עברית" else "### 📚 Study Materials")
