@@ -186,7 +186,7 @@ if menu == cur["m1"]:
             if st.form_submit_button(cur["sync"]): 
                 final_subject = new_sub_input if selected_sub == add_new_str else selected_sub
                 if final_subject: save_grade(final_subject, "", g, c); fetch_grades_cached.clear(); st.rerun()
-        with st.expander("🤔 מחשבון 'מה אם'"):
+        with st.expander("מחשבון חיזוי ציון"):
             sim_c = st.number_input("נ\"ז" if st.session_state.lang == "עברית" else "Credits", 1.0, 10.0, 3.0)
             sim_g = st.number_input("ציון" if st.session_state.lang == "עברית" else "Grade", 0, 100, 90)
             if st.button("חשב"):
