@@ -12,6 +12,22 @@ from ai_manager import get_ai_response_stream, extract_text_from_file
 # --- הגדרות ליבה ---
 st.set_page_config(page_title="NEXUS CORE", page_icon="💎", layout="wide", initial_sidebar_state="expanded")
 
+# --- פתרון שורשי לחלונית התרגום של גוגל (לא נוגע בעיצוב) ---
+components.html(
+    """
+    <script>
+        window.parent.document.documentElement.lang = 'he';
+        if (!window.parent.document.querySelector('meta[name="google"]')) {
+            var meta = window.parent.document.createElement('meta');
+            meta.name = 'google';
+            meta.content = 'notranslate';
+            window.parent.document.getElementsByTagName('head')[0].appendChild(meta);
+        }
+    </script>
+    """,
+    width=0, height=0
+)
+
 # תמונת רקע - 4K High-End
 BG_IMAGE_URL = "https://images.unsplash.com/photo-1507842217343-583bb7270b66?q=80&w=2560&auto=format&fit=crop"
 
