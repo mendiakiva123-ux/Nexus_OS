@@ -29,10 +29,10 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
         model_name = next((m for m in available_models if "flash" in m), available_models[0])
         
-        # 🌐 חיבור חכם לאינטרנט בלייב: אנחנו מציידים את המודל בכלי חיפוש של גוגל
+        # 🌐 חיבור חכם לאינטרנט בלייב: התיקון הסופי למבנה שה-API דורש
         model = genai.GenerativeModel(
             model_name=model_name,
-            tools='google_search'
+            tools=[{"google_search": {}}]
         )
         
         history = []
