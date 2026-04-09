@@ -25,16 +25,13 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         api_key = st.secrets["GOOGLE_API_KEY"].strip()
         genai.configure(api_key=api_key)
         
-        # --- התיקון הסופי והמוחלט ---
-        # במקום לתת לקוד לבחור אוטומטית את המודל הכי חדש (שקורס עם הספרייה),
-        # אנחנו מקבעים אותו ספציפית למודל 1.5-flash. המודל הזה תומך במילה google_search_retrieval ועובד מושלם.
-        model_name = "models/gemini-1.5-flash"
+        # --- איתור דינמי בטוח ---
+        # המערכת סורקת אילו מודלים באמת זמינים לך כרגע ב-API, ובוחרת את הטוב ביותר מתוכם
+        available_models = [m.name for m in genai.list_models() if 'generateContent' in m.supported_generation_methods]
+        model_name = next((m for m in available_models if "flash" in m), available_models[0])
         
-        # 🌐 חיבור חכם לאינטרנט בלייב
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            tools='google_search_retrieval'
-        )
+        # --- יצירת המודל (ללא Tools כדי למנוע התרסקויות גרסה) ---
+        model = genai.GenerativeModel(model_name=model_name)
         
         history = []
         if not is_quiz:
@@ -51,8 +48,7 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         
         system_msg = (
             f"System Role: {role_type}. {instruct}\n"
-            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}.\n"
-            f"You are connected to Google Search. If the user asks about current events, news, recent tech updates, or real-time data, USE THE SEARCH TOOL to fetch accurate, up-to-date information.\n\n"
+            f"IMPORTANT: The current year is 2026. The current time is {current_time_str}.\n\n"
             f"--- USER PROFILE ---\n"
             f"Name: Mendi.\n"
             f"Background: IDF soldier nearing the end of his service. Enrolled in a rigorous Data Analyst program.\n"
@@ -92,4 +88,4 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
                 yield chunk.text
                 
     except Exception as e:
-        yield f"🚨 תקלת בינה מלאכותית: {str(e)}\nאם השגיאה קשורה ל-Tools, ייתכן שגרסת ה-API שלך דורשת עדכון (pip install -U google-generativeai)."
+        yield f"🚨 שגיאה: {str(e)}"
