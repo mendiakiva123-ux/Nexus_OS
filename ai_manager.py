@@ -32,7 +32,7 @@ def get_ai_response_stream(subject, prompt, chat_history_list, file_context="", 
         # 🌐 חיבור חכם לאינטרנט בלייב: אנחנו מציידים את המודל בכלי חיפוש של גוגל
         model = genai.GenerativeModel(
             model_name=model_name,
-            tools='google_search_retrieval'
+            tools='google_search'
         )
         
         history = []
